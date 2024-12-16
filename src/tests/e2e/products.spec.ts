@@ -6,6 +6,13 @@ describe('Products (e2e)', () => {
   let server: Application
 
   beforeAll(async () => {
+    const { database } = await import('../../config/database.config')
+  
+    await database
+      .orm
+      .getSchemaGenerator()
+      .updateSchema()
+
     server = (await import('../../server'))
       .server
   })
@@ -19,7 +26,7 @@ describe('Products (e2e)', () => {
       .expect(201)
   })
 
-  it('shoudl list the products', () => {
+  it('should list the products', () => {
     return supertest(server)
       .get('/products')
       .expect(200)
