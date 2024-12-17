@@ -19,4 +19,4 @@ async function main() {
   server.listen(SERVER_PORT, () => logger.info(`Server listening on ${SERVER_PORT}`))
 }
 
-main()
+export default main()

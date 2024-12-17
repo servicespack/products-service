@@ -6,7 +6,7 @@ export class ProductsControllers {
     private readonly service: ProductsService
   ) {}
 
-  public async create(request: Request, response: Response): Promise<any> {
+  public async create(request: Request, response: Response): Promise<Response> {
     const result = await this.service.create(request.body)
 
     return result.match(
@@ -15,11 +15,20 @@ export class ProductsControllers {
     )
   }
 
-  public async list(request: Request, response: Response): Promise<any> {
+  public async list(request: Request, response: Response): Promise<Response> {
     const result = await this.service.list()
 
     return result.match(
       products => response.json({ data: products }),
+      err => response.status(400).json({ error: err })
+    )
+  }
+
+  public async findById(request: Request, response: Response): Promise<Response> {
+    const result = await this.service.findById(request.params.id)
+
+    return result.match(
+      product => response.json(product),
       err => response.status(400).json({ error: err })
     )
   }

@@ -1,6 +1,7 @@
 import { beforeAll, describe, it } from 'vitest'
 import supertest from 'supertest'
 import type { Application } from 'express'
+import { faker } from '@faker-js/faker'
 
 describe('Products (e2e)', () => {
   let server: Application
@@ -21,7 +22,8 @@ describe('Products (e2e)', () => {
     return supertest(server)
       .post('/products')
       .send({
-        name: 'Something'
+        name: faker.commerce.product(),
+        price: Number(faker.commerce.price()),
       })
       .expect(201)
   })
@@ -29,6 +31,19 @@ describe('Products (e2e)', () => {
   it('should list the products', () => {
     return supertest(server)
       .get('/products')
+      .expect(200)
+  })
+
+  it('should find a product by id', async () => {
+    const response = await supertest(server)
+      .post('/products')
+      .send({
+        name: faker.commerce.product(),
+        price: Number(faker.commerce.price()),
+      })
+
+    return supertest(server)
+      .get(`/products/${response.body.id}`)
       .expect(200)
   })
 })

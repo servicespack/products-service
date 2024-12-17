@@ -15,6 +15,7 @@ export class ProductsService {
   
       const product = new ProductEntity()
       product.name = data.name
+      product.price = data.price
   
       await this
         .em
@@ -36,7 +37,25 @@ export class ProductsService {
   
       return ok(products)
     } catch (error) {
+      logger.error(error)
       return err('Error')
+    }
+  }
+
+  public async findById(id: string): Promise<Result<ProductEntity, string>> {
+    try {
+      const product = await this
+        .em
+        .findOne(ProductEntity, { id })
+
+      if (!product) {
+        return err('Not found')
+      }
+
+      return ok(product)
+    } catch (error) {
+      logger.error(error)
+      return err('Not found')
     }
   }
 }

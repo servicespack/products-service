@@ -8,4 +8,7 @@ export class ProductEntity {
 
   @Property()
   name!: string;
+
+  @Property()
+  price!: number;
 }

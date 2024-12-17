@@ -1,6 +1,7 @@
 import { SqliteDriver, MikroORM as MikroORMSQLite } from '@mikro-orm/sqlite';
 import { TsMorphMetadataProvider } from '@mikro-orm/reflection';
 import { MikroORM } from '@mikro-orm/core';
+
 import { ProductEntity } from '../entities/product.entity';
 
 export class Database {

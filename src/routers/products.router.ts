@@ -14,4 +14,8 @@ router
   .post(controllers.create.bind(controllers))
   .get(controllers.list.bind(controllers))
 
+router
+  .route('/products/:id')
+  .get(controllers.findById.bind(controllers))
+
 export { router }
