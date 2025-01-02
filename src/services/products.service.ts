@@ -1,29 +1,31 @@
-import { EntityManager } from '@mikro-orm/core';
-import { CreateProductDto } from '../dtos/create-product.dto';
-import { ProductEntity } from '../entities/product.entity';
-import { err, ok, Result } from 'neverthrow';
-import { logger } from '../logger';
+import type { EntityManager } from '@mikro-orm/core'
+import type { Result } from 'neverthrow'
+import { err, ok } from 'neverthrow'
+import { CreateProductDto } from '../dtos/create-product.dto'
+import { ProductEntity } from '../entities/product.entity'
+import { logger } from '../logger'
 
 export class ProductsService {
-  constructor (
-    private readonly em: EntityManager
+  constructor(
+    private readonly em: EntityManager,
   ) {}
 
   public async create(dto: CreateProductDto): Promise<Result<ProductEntity, string>> {
     try {
       const data = CreateProductDto.parse(dto)
-  
+
       const product = new ProductEntity()
       product.name = data.name
       product.price = data.price
-  
+
       await this
         .em
         .persist(product)
         .flush()
-  
+
       return ok(product)
-    } catch (error) {
+    }
+    catch (error) {
       logger.error(error)
       return err('Failed to create product. Please verify the input data and try again.')
     }
@@ -34,9 +36,10 @@ export class ProductsService {
       const products = await this
         .em
         .findAll(ProductEntity)
-  
+
       return ok(products)
-    } catch (error) {
+    }
+    catch (error) {
       logger.error(error)
       return err('Error')
     }
@@ -53,7 +56,8 @@ export class ProductsService {
       }
 
       return ok(product)
-    } catch (error) {
+    }
+    catch (error) {
       logger.error(error)
       return err('Not found')
     }

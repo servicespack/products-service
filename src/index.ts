@@ -1,12 +1,14 @@
+import process from 'node:process'
+
 async function main() {
   const [
     { database },
     { logger },
-    { server }
+    { server },
   ] = await Promise.all([
     import('./config/database.config'),
     import('./logger'),
-    import('./server')
+    import('./server'),
   ])
 
   await database

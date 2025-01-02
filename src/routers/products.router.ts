@@ -1,8 +1,8 @@
 import { Router } from 'express'
 
+import { database } from '../config/database.config'
 import { ProductsControllers } from '../controllers/products.controllers'
 import { ProductsService } from '../services/products.service'
-import { database } from '../config/database.config'
 
 const router = Router()
 

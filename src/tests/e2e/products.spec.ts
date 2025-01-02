@@ -1,14 +1,14 @@
-import { beforeAll, describe, it } from 'vitest'
-import supertest from 'supertest'
 import type { Application } from 'express'
 import { faker } from '@faker-js/faker'
+import supertest from 'supertest'
+import { beforeAll, describe, it } from 'vitest'
 
-describe('Products (e2e)', () => {
+describe('products (e2e)', () => {
   let server: Application
 
   beforeAll(async () => {
     const { database } = await import('../../config/database.config')
-  
+
     await database
       .orm
       .getSchemaGenerator()

@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
-import { ProductsService } from '../services/products.service';
+import type { Request, Response } from 'express'
+import type { ProductsService } from '../services/products.service'
 
 export class ProductsControllers {
   constructor(
-    private readonly service: ProductsService
+    private readonly service: ProductsService,
   ) {}
 
   public async create(request: Request, response: Response): Promise<void> {
@@ -11,7 +11,7 @@ export class ProductsControllers {
 
     result.match(
       product => response.status(201).json(product),
-      err => response.status(400).json({ error: err })
+      err => response.status(400).json({ error: err }),
     )
   }
 
@@ -20,7 +20,7 @@ export class ProductsControllers {
 
     result.match(
       products => response.json({ data: products }),
-      err => response.status(400).json({ error: err })
+      err => response.status(400).json({ error: err }),
     )
   }
 
@@ -29,7 +29,7 @@ export class ProductsControllers {
 
     result.match(
       product => response.json(product),
-      err => response.status(400).json({ error: err })
+      err => response.status(400).json({ error: err }),
     )
   }
 }
