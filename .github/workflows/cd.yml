@@ -1,0 +1,24 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    types:
+      - completed
+    branches:
+      - develop
+      - main
+
+jobs:
+  dockerfile-cd:
+    name: Dockerfile CD
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actalog/check-ci@v1
+      - uses: actions/checkout@v4
+      - uses: actalog/dockerfile-cd@v1
+        with:
+          image-name: servicespack/products-api
+          image-version: develop
+          registry-username: servicespack
+          registry-token: ${{ secrets.DOCKER_HUB_TOKEN }}
