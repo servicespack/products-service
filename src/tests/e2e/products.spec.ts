@@ -1,13 +1,21 @@
 import type { Application } from 'express'
 import { faker } from '@faker-js/faker'
+import { EntityManager } from '@mikro-orm/core'
 import supertest from 'supertest'
 import { beforeAll, describe, it } from 'vitest'
+import { container } from '../../config/container.config'
+import { ProductsControllers } from '../../controllers/products.controllers'
+import { ProductsService } from '../../services/products.service'
 
 describe('products (e2e)', () => {
   let server: Application
 
   beforeAll(async () => {
     const { database } = await import('../../config/database.config')
+
+    container.bind(EntityManager.name).toConstantValue(database.orm.em.fork())
+    container.bind(ProductsService.name).to(ProductsService)
+    container.bind(ProductsControllers.name).to(ProductsControllers)
 
     await database
       .orm
