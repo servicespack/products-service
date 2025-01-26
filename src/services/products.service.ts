@@ -8,8 +8,10 @@ import { ProductEntity } from '../entities/product.entity'
 
 @injectable()
 export class ProductsService {
-  @inject(EntityManager.name)
-  private readonly em!: EntityManager
+  constructor(
+    @inject(EntityManager.name)
+    private readonly em: EntityManager,
+  ) {}
 
   public async create(dto: CreateProductDto): Promise<Result<ProductEntity, string>> {
     try {
