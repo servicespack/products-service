@@ -1,8 +1,11 @@
 import type { Request, Response } from 'express'
-import type { ProductsService } from '../services/products.service'
+import { inject, injectable } from 'inversify'
+import { ProductsService } from '../services/products.service'
 
+@injectable()
 export class ProductsControllers {
   constructor(
+    @inject(ProductsService.name)
     private readonly service: ProductsService,
   ) {}
 

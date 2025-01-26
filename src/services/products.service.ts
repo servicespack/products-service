@@ -1,14 +1,15 @@
-import type { EntityManager } from '@mikro-orm/core'
 import type { Result } from 'neverthrow'
+import { EntityManager } from '@mikro-orm/core'
+import { inject, injectable } from 'inversify'
 import { err, ok } from 'neverthrow'
+import { logger } from '../config/logger.config'
 import { CreateProductDto } from '../dtos/create-product.dto'
 import { ProductEntity } from '../entities/product.entity'
-import { logger } from '../logger'
 
+@injectable()
 export class ProductsService {
-  constructor(
-    private readonly em: EntityManager,
-  ) {}
+  @inject(EntityManager.name)
+  private readonly em!: EntityManager
 
   public async create(dto: CreateProductDto): Promise<Result<ProductEntity, string>> {
     try {

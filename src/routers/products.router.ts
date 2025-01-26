@@ -1,13 +1,10 @@
 import { Router } from 'express'
-
-import { database } from '../config/database.config'
+import { container } from '../config/container.config'
 import { ProductsControllers } from '../controllers/products.controllers'
-import { ProductsService } from '../services/products.service'
 
 const router = Router()
 
-const service = new ProductsService(database.orm.em.fork())
-const controllers = new ProductsControllers(service)
+const controllers = container.get<ProductsControllers>(ProductsControllers.name)
 
 router
   .route('/products')
