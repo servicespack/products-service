@@ -1,11 +1,19 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import type { IProductRepository } from '../interfaces/product-repository.interface'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CreateProductUseCase } from './create-product.use-case'
 
 describe(CreateProductUseCase.name, () => {
   let createProductUseCase: CreateProductUseCase
+  let mocksProductRepository: IProductRepository
 
   beforeEach(() => {
-    createProductUseCase = new CreateProductUseCase()
+    mocksProductRepository = {
+      insert: vi.fn(entity => entity),
+    }
+
+    createProductUseCase = new CreateProductUseCase(
+      mocksProductRepository,
+    )
   })
 
   it('should return the created product', async () => {
