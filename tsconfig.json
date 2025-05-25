@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "es2015",
     "experimentalDecorators": true,
+    "module": "es2020",
     "moduleResolution": "node"
   }
 }
