@@ -1,5 +1,6 @@
-import type { CreateProductDto } from '../../dtos/create-product.dto'
+import type { CreateProductInputDto } from '../dtos/create-product-input.dto'
 import type { IProductRepository } from '../interfaces/product-repository.interface'
+import { faker } from '@faker-js/faker'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CreateProductUseCase } from './create-product.use-case'
 
@@ -10,7 +11,7 @@ describe(CreateProductUseCase.name, () => {
   beforeEach(() => {
     mocksProductRepository = {
       insert: vi.fn(entity => entity),
-    }
+    } as unknown as IProductRepository
 
     createProductUseCase = new CreateProductUseCase(
       mocksProductRepository,
@@ -19,12 +20,12 @@ describe(CreateProductUseCase.name, () => {
 
   it('should return the created product', async () => {
     const input = {
-      name: 'Product 1',
-      price: 100,
-      description: 'A great product',
+      name: faker.commerce.productName(),
+      description: faker.commerce.productDescription(),
+      price: faker.number.float({ min: 0, max: 1000 }),
       sku: 'PROD-001',
       stock: 50,
-    } as CreateProductDto
+    } as CreateProductInputDto
 
     const output = await createProductUseCase.execute(input)
 
