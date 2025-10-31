@@ -9,8 +9,15 @@ export class ListProductsUseCase implements IUseCase<ListProductsInputDto, ListP
   ) {}
 
   public async execute(input: ListProductsInputDto) {
+    const { page = 1, pageSize = 20 } = input
+
+    const offset = (page - 1) * pageSize
+    const limit = pageSize
+
     return this.productRepository.findAll({
       search: input.search,
+      offset,
+      limit,
     })
   };
 }

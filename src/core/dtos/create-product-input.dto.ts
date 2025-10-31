@@ -1,4 +1,3 @@
-export type CreateProductInputDto = {
-  name: string
-  price: number
-} & {}
+import type { ProductEntity } from '../entities/product.entity'
+
+export type CreateProductInputDto = Pick<ProductEntity, 'name' | 'description' | 'price' | 'sku' | 'stock' >

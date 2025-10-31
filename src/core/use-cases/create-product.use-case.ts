@@ -16,6 +16,11 @@ export class CreateProductUseCase implements IUseCase<CreateProductInputDto, Cre
     product.id = crypto.randomUUID()
     product.name = input.name
     product.price = input.price
+    product.description = input.description
+    product.sku = input.sku
+    product.stock = input.stock
+    product.createdAt = new Date()
+    product.updatedAt = new Date()
 
     await this.productRepository.insert(product)
 
