@@ -1,13 +1,10 @@
 import type { Request, Response } from 'express'
-import { inject, injectable } from 'inversify'
-import { ProductsService } from '../services/products.service'
+import type { ProductsService } from '../services/products.service'
 
-@injectable()
 export class ProductsControllers {
   constructor(
-    @inject(ProductsService.name)
     private readonly service: ProductsService,
-  ) {}
+  ) { }
 
   public async create(request: Request, response: Response): Promise<void> {
     const result = await this.service.create(request.body)

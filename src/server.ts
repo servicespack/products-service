@@ -1,10 +1,11 @@
+import type { Router } from 'express'
 import express from 'express'
 
-import { router as ProductsRouter } from './routers/products.router'
+export function createServer(productsRouter: Router) {
+    const server = express()
 
-const server = express()
+    server.use(express.json())
+    server.use(productsRouter)
 
-server.use(express.json())
-server.use(ProductsRouter)
-
-export { server }
+    return server
+}

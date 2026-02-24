@@ -1,33 +1,33 @@
 import type { Application } from 'express'
 import { faker } from '@faker-js/faker'
-import { EntityManager } from '@mikro-orm/core'
-import supertest from 'supertest'
+import request from 'supertest'
 import { beforeAll, describe, it } from 'vitest'
-import { container } from '../../config/container.config'
-import { ProductsControllers } from '../../controllers/products.controllers'
-import { ProductsService } from '../../services/products.service'
 
 describe('products (e2e)', () => {
   let server: Application
 
   beforeAll(async () => {
     const { database } = await import('../../config/database.config')
+    const { ProductsService } = await import('../../services/products.service')
+    const { ProductsControllers } = await import('../../controllers/products.controllers')
+    const { createRouter } = await import('../../routers/products.router')
+    const { createServer } = await import('../../server')
 
-    container.bind(EntityManager.name).toConstantValue(database.orm.em.fork())
-    container.bind(ProductsService.name).to(ProductsService)
-    container.bind(ProductsControllers.name).to(ProductsControllers)
+    const em = database.orm.em.fork()
+    const productsService = new ProductsService(em)
+    const productsControllers = new ProductsControllers(productsService)
+    const productsRouter = createRouter(productsControllers)
 
     await database
       .orm
-      .getSchemaGenerator()
+      .schema
       .updateSchema()
 
-    server = (await import('../../server'))
-      .server
+    server = createServer(productsRouter)
   })
 
   it('should create a product', () => {
-    return supertest(server)
+    return request(server)
       .post('/products')
       .send({
         name: faker.commerce.product(),
@@ -37,20 +37,20 @@ describe('products (e2e)', () => {
   })
 
   it('should list the products', () => {
-    return supertest(server)
+    return request(server)
       .get('/products')
       .expect(200)
   })
 
   it('should find a product by id', async () => {
-    const response = await supertest(server)
+    const response = await request(server)
       .post('/products')
       .send({
         name: faker.commerce.product(),
         price: Number(faker.commerce.price()),
       })
 
-    return supertest(server)
+    return request(server)
       .get(`/products/${response.body.id}`)
       .expect(200)
   })

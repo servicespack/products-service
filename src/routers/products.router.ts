@@ -1,18 +1,17 @@
+import type { ProductsControllers } from '../controllers/products.controllers'
 import { Router } from 'express'
-import { container } from '../config/container.config'
-import { ProductsControllers } from '../controllers/products.controllers'
 
-const router = Router()
+export function createRouter(controllers: ProductsControllers) {
+  const router = Router()
 
-const controllers = container.get<ProductsControllers>(ProductsControllers.name)
+  router
+    .route('/products')
+    .post(controllers.create.bind(controllers))
+    .get(controllers.list.bind(controllers))
 
-router
-  .route('/products')
-  .post(controllers.create.bind(controllers))
-  .get(controllers.list.bind(controllers))
+  router
+    .route('/products/:id')
+    .get(controllers.findById.bind(controllers))
 
-router
-  .route('/products/:id')
-  .get(controllers.findById.bind(controllers))
-
-export { router }
+  return router
+}

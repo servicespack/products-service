@@ -1,27 +1,29 @@
 import * as process from 'node:process'
-import { EntityManager } from '@mikro-orm/core'
-import { container } from './config/container.config'
+
 import { ProductsControllers } from './controllers/products.controllers'
 import { ProductsService } from './services/products.service'
 
 async function main() {
   const { database } = await import('./config/database.config')
 
-  container.bind(EntityManager.name).toConstantValue(database.orm.em.fork())
-  container.bind(ProductsService.name).to(ProductsService)
-  container.bind(ProductsControllers.name).to(ProductsControllers)
+  const em = database.orm.em.fork()
+  const productsService = new ProductsService(em)
+  const productsControllers = new ProductsControllers(productsService)
+  const productsRouter = (await import('./routers/products.router')).createRouter(productsControllers)
 
   const [
     { logger },
-    { server },
+    { createServer },
   ] = await Promise.all([
     import('./config/logger.config'),
     import('./server'),
   ])
 
+  const server = createServer(productsRouter)
+
   await database
     .orm
-    .getSchemaGenerator()
+    .schema
     .updateSchema()
 
   const { SERVER_PORT } = process.env
