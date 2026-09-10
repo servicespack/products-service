@@ -1,34 +1,16 @@
-import * as process from 'node:process'
-
-import { ProductsControllers } from './controllers/products.controllers'
-import { ProductsService } from './services/products.service'
+import { configuration, connectDatabase, cooldown, logger } from './config'
+import { server } from './infrastructure/http/server'
 
 async function main() {
-  const { database } = await import('./config/database.config')
+  await connectDatabase()
 
-  const em = database.orm.em.fork()
-  const productsService = new ProductsService(em)
-  const productsControllers = new ProductsControllers(productsService)
-  const productsRouter = (await import('./routers/products.router')).createRouter(productsControllers)
+  const port = configuration.servers.http.port
 
-  const [
-    { logger },
-    { createServer },
-  ] = await Promise.all([
-    import('./config/logger.config'),
-    import('./server'),
-  ])
+  server.listen(port, () => {
+    logger.info(`Server listening on ${port}`)
+  })
 
-  const server = createServer(productsRouter)
-
-  await database
-    .orm
-    .schema
-    .updateSchema()
-
-  const { SERVER_PORT } = process.env
-
-  server.listen(SERVER_PORT, () => logger.info(`Server listening on ${SERVER_PORT}`))
+  cooldown({ server })
 }
 
 export default main()
