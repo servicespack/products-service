@@ -1,37 +1,44 @@
-FROM node:22-alpine AS builder
+# Stage 1: Base
+FROM node:24-alpine AS base
 
-# Defina o diretório de trabalho
 WORKDIR /app
 
-# Copie os arquivos de dependências
+# Stage 2: Dependencies
+FROM base AS dependencies
+
 COPY package.json package-lock.json ./
 
-# Instale as dependências de desenvolvimento
-RUN npm install
+RUN npm ci
 
-# Copie o restante do código
+# Stage 3: Builder
+FROM base AS builder
+
+COPY package.json package-lock.json ./
+COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 
-# Compile o TypeScript para JavaScript
 RUN npm run build
 
-# Etapa 2: Execução
-FROM node:22-alpine
+# Stage 4: Production dependencies
+FROM base AS prod-dependencies
 
-# Defina o diretório de trabalho
-WORKDIR /app
-
-# Copie as dependências necessárias (apenas runtime)
 COPY package.json package-lock.json ./
 
-# Instale apenas as dependências de produção
-RUN npm install --only=production
+RUN npm ci --omit=dev
 
-# Copie o código compilado da etapa anterior
-COPY --from=builder /app/dist ./dist
+# Stage 5: Runner
+FROM node:24-alpine AS runner
 
-# Exponha a porta da API
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --chown=node:node package.json ./
+COPY --chown=node:node --from=prod-dependencies /app/node_modules ./node_modules
+COPY --chown=node:node --from=builder /app/dist ./dist
+
+USER node
+
 EXPOSE 3000
 
-# Comando para rodar a aplicação
 CMD ["node", "dist/index.js"]
