@@ -36,13 +36,13 @@ export class ProductsController {
         sku: sku as string,
         category: category as string,
         tag: tag as string,
-        minPrice: minPrice !== undefined ? Number(minPrice) : undefined,
-        maxPrice: maxPrice !== undefined ? Number(maxPrice) : undefined,
+        minPrice: minPrice !== undefined && !Number.isNaN(Number(minPrice)) ? Number(minPrice) : undefined,
+        maxPrice: maxPrice !== undefined && !Number.isNaN(Number(maxPrice)) ? Number(maxPrice) : undefined,
         active: active !== undefined ? active === 'true' : undefined,
         includeDeleted: includeDeleted !== undefined ? includeDeleted === 'true' : undefined,
         onlyDeleted: onlyDeleted !== undefined ? onlyDeleted === 'true' : undefined,
-        page: page ? Number(page) : undefined,
-        pageSize: (pageSize || size) ? Number(pageSize || size) : undefined,
+        page: page && !Number.isNaN(Number(page)) ? Number(page) : undefined,
+        pageSize: (pageSize || size) && !Number.isNaN(Number(pageSize || size)) ? Number(pageSize || size) : undefined,
       })
       return response.status(200).json({ data: result })
     }
@@ -135,8 +135,8 @@ export class ProductsController {
       const movements = await this.dependencies.listStockMovementsUseCase.execute(
         request.params.id as string,
         {
-          page: page ? Number(page) : undefined,
-          pageSize: (pageSize || size) ? Number(pageSize || size) : undefined,
+          page: page && !Number.isNaN(Number(page)) ? Number(page) : undefined,
+          pageSize: (pageSize || size) && !Number.isNaN(Number(pageSize || size)) ? Number(pageSize || size) : undefined,
         },
       )
       return response.status(200).json({ data: movements })

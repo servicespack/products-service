@@ -5,6 +5,5 @@ export interface UpdateProductRequest {
   readonly sku?: string
   readonly categories?: string[]
   readonly tags?: string[]
-  readonly stock?: number
   readonly active?: boolean
 }

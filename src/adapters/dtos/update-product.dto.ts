@@ -7,7 +7,6 @@ export const UpdateProductDto = z.object({
   sku: z.string().optional(),
   categories: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
-  stock: z.number().int().nonnegative().optional(),
   active: z.boolean().optional(),
 })
 

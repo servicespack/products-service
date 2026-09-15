@@ -16,5 +16,5 @@ export function handleHttpError(error: unknown, response: Response): Response {
     return response.status(400).json({ error: error.message })
   }
 
-  return response.status(400).json({ error: (error as Error).message || 'Error' })
+  return response.status(500).json({ error: 'Internal Server Error' })
 }
