@@ -1,32 +1,16 @@
-import * as process from 'node:process'
-import { EntityManager } from '@mikro-orm/core'
-import { container } from './config/container.config'
-import { ProductsControllers } from './controllers/products.controllers'
-import { ProductsService } from './services/products.service'
+import { configuration, connectDatabase, cooldown, logger } from './config'
+import { server } from './infrastructure/http/server'
 
 async function main() {
-  const { database } = await import('./config/database.config')
+  await connectDatabase()
 
-  container.bind(EntityManager.name).toConstantValue(database.orm.em.fork())
-  container.bind(ProductsService.name).to(ProductsService)
-  container.bind(ProductsControllers.name).to(ProductsControllers)
+  const port = configuration.servers.http.port
 
-  const [
-    { logger },
-    { server },
-  ] = await Promise.all([
-    import('./config/logger.config'),
-    import('./server'),
-  ])
+  server.listen(port, () => {
+    logger.info(`Server listening on ${port}`)
+  })
 
-  await database
-    .orm
-    .getSchemaGenerator()
-    .updateSchema()
-
-  const { SERVER_PORT } = process.env
-
-  server.listen(SERVER_PORT, () => logger.info(`Server listening on ${SERVER_PORT}`))
+  cooldown({ server })
 }
 
 export default main()
