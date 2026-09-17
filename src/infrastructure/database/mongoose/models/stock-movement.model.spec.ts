@@ -35,4 +35,29 @@ describe('stockMovementModel transformations', () => {
     expect((ret as any)._id).toBeUndefined()
     expect((ret as any).__v).toBeUndefined()
   })
+
+  it('should transform toObject correctly', () => {
+    const transform = (stockMovementSchema as any).options.toObject.transform
+
+    const mockId = new mongoose.Types.ObjectId()
+    const doc = {}
+    const ret = {
+      _id: mockId,
+      __v: 0,
+      productId: 'prod-123',
+      type: 'INCREMENT',
+      quantity: 5,
+    }
+
+    transform(doc, ret)
+
+    expect(ret).toEqual({
+      id: mockId.toHexString(),
+      productId: 'prod-123',
+      type: 'INCREMENT',
+      quantity: 5,
+    })
+    expect((ret as any)._id).toBeUndefined()
+    expect((ret as any).__v).toBeUndefined()
+  })
 })

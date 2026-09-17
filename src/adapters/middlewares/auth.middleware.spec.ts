@@ -1,6 +1,6 @@
 import type { NextFunction, Response } from 'express'
 import jwt from 'jsonwebtoken'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { configuration } from '../../config'
 import { type AuthenticatedRequest, authMiddleware } from './auth.middleware'
 
@@ -83,5 +83,61 @@ describe('authMiddleware', () => {
     expect(mockResponse.status).toHaveBeenCalledWith(401)
     expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Invalid token' })
     expect(nextFunction).not.toHaveBeenCalled()
+  })
+
+  it('should ignore authorization header if scheme is not Bearer', () => {
+    mockRequest.headers!.authorization = 'Basic dXNlcjpwYXNz'
+
+    authMiddleware(mockRequest as AuthenticatedRequest, mockResponse as Response, nextFunction)
+
+    expect(mockResponse.status).toHaveBeenCalledWith(401)
+    expect(mockResponse.json).toHaveBeenCalledWith({ error: 'No token provided' })
+    expect(nextFunction).not.toHaveBeenCalled()
+  })
+
+  describe('production environment', () => {
+    const originalEnv = configuration.environment
+
+    afterEach(() => {
+      configuration.environment = originalEnv
+    })
+
+    it('should reject token without expiration in production', () => {
+      configuration.environment = 'production'
+
+      const token = jwt.sign(
+        { sub: 'user-prod' },
+        configuration.auth.jwtSecret,
+        { issuer: configuration.auth.jwtIssuer, audience: configuration.auth.jwtAudience },
+      )
+      mockRequest.headers!.authorization = `Bearer ${token}`
+
+      authMiddleware(mockRequest as AuthenticatedRequest, mockResponse as Response, nextFunction)
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401)
+      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Token missing expiration' })
+      expect(nextFunction).not.toHaveBeenCalled()
+    })
+
+    it('should accept token with expiration in production', () => {
+      configuration.environment = 'production'
+
+      const token = jwt.sign(
+        { sub: 'user-prod' },
+        configuration.auth.jwtSecret,
+        {
+          issuer: configuration.auth.jwtIssuer,
+          audience: configuration.auth.jwtAudience,
+          expiresIn: '1h',
+        },
+      )
+      mockRequest.headers!.authorization = `Bearer ${token}`
+
+      authMiddleware(mockRequest as AuthenticatedRequest, mockResponse as Response, nextFunction)
+
+      expect(mockRequest.userId).toBe('user-prod')
+      expect(nextFunction).toHaveBeenCalled()
+      expect(mockResponse.status).not.toHaveBeenCalled()
+    })
   })
 })

@@ -10,7 +10,7 @@ app.use(express.json())
 app.use(router)
 
 // Global Error Handler
-app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
   const error = err as Error & { status?: number, statusCode?: number, code?: number }
   const status = error.status || error.statusCode || 500
 
@@ -27,7 +27,9 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   return res.status(status).json({
     error: 'Internal Server Error',
   })
-})
+}
+
+app.use(errorHandler)
 
 export const server = http.createServer(app)
 export { app }

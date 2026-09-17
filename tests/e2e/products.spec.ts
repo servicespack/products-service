@@ -387,4 +387,76 @@ describe('products (e2e)', () => {
     expect(first.currentStock).toBe(15)
     expect(first.reason).toBe('Customer order #1001')
   })
+
+  it('should support alias routes for patch, stock decrease, stock increase and movements', async () => {
+    const created = await request(server)
+      .post('/products')
+      .set('Authorization', authToken)
+      .send({
+        name: 'Alias Test Product',
+        price: 50,
+        stock: 20,
+      })
+      .expect(201)
+
+    const productId = created.body.id
+
+    // PATCH /products/:id
+    const patchRes = await request(server)
+      .patch(`/products/${productId}`)
+      .set('Authorization', authToken)
+      .send({ name: 'Patched Product Name' })
+      .expect(200)
+
+    expect(patchRes.body.name).toBe('Patched Product Name')
+
+    // POST /products/:id/stock/decrease
+    const decRes = await request(server)
+      .post(`/products/${productId}/stock/decrease`)
+      .set('Authorization', authToken)
+      .send({ quantity: 5, reason: 'Sold via alias' })
+      .expect(200)
+
+    expect(decRes.body.stock).toBe(15)
+
+    // POST /products/:id/stock/increase
+    const incRes = await request(server)
+      .post(`/products/${productId}/stock/increase`)
+      .set('Authorization', authToken)
+      .send({ quantity: 10, reason: 'Restocked via alias' })
+      .expect(200)
+
+    expect(incRes.body.stock).toBe(25)
+
+    // GET /products/:id/movements
+    const movRes = await request(server)
+      .get(`/products/${productId}/movements`)
+      .set('Authorization', authToken)
+      .expect(200)
+
+    expect(movRes.body.data).toHaveLength(2)
+  })
+
+  it('should filter onlyDeleted products', async () => {
+    const created = await request(server)
+      .post('/products')
+      .set('Authorization', authToken)
+      .send({
+        name: 'Only Deleted Candidate',
+        price: 25,
+      })
+      .expect(201)
+
+    await request(server)
+      .delete(`/products/${created.body.id}`)
+      .set('Authorization', authToken)
+      .expect(204)
+
+    const onlyDeletedRes = await request(server)
+      .get('/products?onlyDeleted=true')
+      .set('Authorization', authToken)
+      .expect(200)
+
+    expect(onlyDeletedRes.body.data.some((p: { id: string }) => p.id === created.body.id)).toBe(true)
+  })
 })

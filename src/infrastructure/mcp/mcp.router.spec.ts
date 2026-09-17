@@ -167,4 +167,40 @@ describe('createMcpRouter', () => {
       server.close()
     }
   })
+
+  it('should return 500 on SSE connection error when headers are not sent', async () => {
+    vi.mocked(mcpServer.connect).mockRejectedValueOnce(new Error('Connection failed'))
+
+    const res = await request(app)
+      .get('/sse')
+      .expect(500)
+
+    expect(res.body).toEqual({ error: 'Failed to establish MCP connection' })
+  })
+
+  it('should construct messagesEndpoint using req.baseUrl when router is mounted on a subpath', async () => {
+    vi.mocked(mcpServer.connect).mockImplementation(async (transport) => {
+      await transport.start()
+    })
+
+    const prefixedApp = express()
+    prefixedApp.use('/api', createMcpRouter(mcpServer))
+
+    const server = prefixedApp.listen(0)
+    const { port } = server.address() as { port: number }
+    const abortController = new AbortController()
+
+    try {
+      const res = await fetch(`http://localhost:${port}/api/sse`, { signal: abortController.signal })
+      const reader = res.body!.getReader()
+      const { value } = await reader.read()
+      const text = new TextDecoder().decode(value)
+
+      expect(text).toContain('/api/messages?sessionId=')
+    }
+    finally {
+      abortController.abort()
+      server.close()
+    }
+  })
 })

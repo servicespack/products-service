@@ -80,4 +80,25 @@ describe('cooldown', () => {
     expect(logger.error).toHaveBeenCalledWith(error)
     expect(processExitSpy).toHaveBeenCalledWith(128 + 15)
   })
+
+  it('should force exit when graceful shutdown times out after 10 seconds', () => {
+    vi.useFakeTimers()
+    mockServer.close = vi.fn()
+
+    cooldown({ server: mockServer as http.Server })
+
+    const sigintCall = processOnSpy.mock.calls.find((call: any[]) => call[0] === 'SIGINT')
+    const sigintHandler = sigintCall[1]
+
+    sigintHandler()
+
+    expect(mockServer.close).toHaveBeenCalled()
+    expect(processExitSpy).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(10000)
+
+    expect(logger.error).toHaveBeenCalledWith('Graceful shutdown timed out, force exiting')
+    expect(processExitSpy).toHaveBeenCalledWith(128 + 2)
+    vi.useRealTimers()
+  })
 })

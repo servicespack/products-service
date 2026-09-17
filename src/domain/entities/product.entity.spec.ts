@@ -139,6 +139,28 @@ describe('product Entity', () => {
     expect(product.stock).toBe(0)
   })
 
+  it('should not update properties when undefined values are passed', () => {
+    const product = new Product({
+      name: 'Keyboard',
+      price: 100,
+      description: 'Standard',
+      sku: 'KB-01',
+      categories: ['Accessories'],
+      tags: ['wired'],
+      active: true,
+    })
+
+    product.update({})
+
+    expect(product.name).toBe('Keyboard')
+    expect(product.price).toBe(100)
+    expect(product.description).toBe('Standard')
+    expect(product.sku).toBe('KB-01')
+    expect(product.categories).toEqual(['Accessories'])
+    expect(product.tags).toEqual(['wired'])
+    expect(product.active).toBe(true)
+  })
+
   it('should support soft delete and restore', () => {
     const product = new Product({
       name: 'Keyboard',
