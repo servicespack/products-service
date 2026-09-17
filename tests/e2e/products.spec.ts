@@ -3,19 +3,30 @@ import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { connectDatabase } from '../../src/config/database'
 import { server } from '../../src/infrastructure/http/server'
+import { generateTestToken } from '../helpers/auth.helper'
 
 describe('products (e2e)', () => {
+  let authToken: string
+
   beforeAll(async () => {
     await connectDatabase()
+    authToken = `Bearer ${generateTestToken()}`
   })
 
   afterAll(() => {
     server.close()
   })
 
+  it('should reject unauthenticated requests', async () => {
+    await request(server)
+      .get('/products')
+      .expect(401)
+  })
+
   it('should create a product', async () => {
     const response = await request(server)
       .post('/products')
+      .set('Authorization', authToken)
       .send({
         name: faker.commerce.product(),
         price: Number(faker.commerce.price()),
@@ -30,6 +41,7 @@ describe('products (e2e)', () => {
   it('should list the products', async () => {
     const response = await request(server)
       .get('/products')
+      .set('Authorization', authToken)
       .expect(200)
 
     expect(response.body).toHaveProperty('data')
@@ -39,6 +51,7 @@ describe('products (e2e)', () => {
   it('should find a product by id', async () => {
     const response = await request(server)
       .post('/products')
+      .set('Authorization', authToken)
       .send({
         name: faker.commerce.product(),
         price: Number(faker.commerce.price()),
@@ -46,12 +59,14 @@ describe('products (e2e)', () => {
 
     return request(server)
       .get(`/products/${response.body.id}`)
+      .set('Authorization', authToken)
       .expect(200)
   })
 
   it('should update a product by id', async () => {
     const created = await request(server)
       .post('/products')
+      .set('Authorization', authToken)
       .send({
         name: 'Initial Product',
         price: 99.99,
@@ -61,6 +76,7 @@ describe('products (e2e)', () => {
 
     const updateResponse = await request(server)
       .put(`/products/${created.body.id}`)
+      .set('Authorization', authToken)
       .send({
         name: 'Updated Product Name',
         price: 149.99,
@@ -73,6 +89,7 @@ describe('products (e2e)', () => {
 
     const getResponse = await request(server)
       .get(`/products/${created.body.id}`)
+      .set('Authorization', authToken)
       .expect(200)
 
     expect(getResponse.body.name).toBe('Updated Product Name')
@@ -82,6 +99,7 @@ describe('products (e2e)', () => {
   it('should delete a product by id', async () => {
     const created = await request(server)
       .post('/products')
+      .set('Authorization', authToken)
       .send({
         name: 'Product to Delete',
         price: 29.99,
@@ -90,10 +108,12 @@ describe('products (e2e)', () => {
 
     await request(server)
       .delete(`/products/${created.body.id}`)
+      .set('Authorization', authToken)
       .expect(204)
 
     await request(server)
       .get(`/products/${created.body.id}`)
+      .set('Authorization', authToken)
       .expect(404)
   })
 
@@ -102,6 +122,7 @@ describe('products (e2e)', () => {
 
     await request(server)
       .post('/products')
+      .set('Authorization', authToken)
       .send({
         name: 'Special Searchable Item',
         price: 75,
@@ -112,6 +133,7 @@ describe('products (e2e)', () => {
 
     const listResponse = await request(server)
       .get(`/products?search=Searchable&sku=${uniqueSku}&minPrice=50&maxPrice=100&active=true`)
+      .set('Authorization', authToken)
       .expect(200)
 
     expect(listResponse.body.data.length).toBeGreaterThanOrEqual(1)
@@ -121,6 +143,7 @@ describe('products (e2e)', () => {
   it('should return 400 Bad Request on missing required fields when creating', async () => {
     await request(server)
       .post('/products')
+      .set('Authorization', authToken)
       .send({})
       .expect(400)
   })
@@ -129,6 +152,7 @@ describe('products (e2e)', () => {
     const nonExistentId = faker.string.uuid()
     const response = await request(server)
       .get(`/products/${nonExistentId}`)
+      .set('Authorization', authToken)
       .expect(404)
 
     expect(response.body).toEqual({ error: 'Product not found' })
@@ -138,6 +162,7 @@ describe('products (e2e)', () => {
     const nonExistentId = faker.string.uuid()
     const response = await request(server)
       .put(`/products/${nonExistentId}`)
+      .set('Authorization', authToken)
       .send({ name: 'Does Not Exist' })
       .expect(404)
 
@@ -148,6 +173,7 @@ describe('products (e2e)', () => {
     const nonExistentId = faker.string.uuid()
     const response = await request(server)
       .delete(`/products/${nonExistentId}`)
+      .set('Authorization', authToken)
       .expect(404)
 
     expect(response.body).toEqual({ error: 'Product not found' })
@@ -156,6 +182,7 @@ describe('products (e2e)', () => {
   it('should decrease and increase product stock', async () => {
     const created = await request(server)
       .post('/products')
+      .set('Authorization', authToken)
       .send({
         name: 'Stock Managed Item',
         price: 50,
@@ -165,6 +192,7 @@ describe('products (e2e)', () => {
 
     const decreaseRes = await request(server)
       .post(`/products/${created.body.id}/decrease-stock`)
+      .set('Authorization', authToken)
       .send({ quantity: 4 })
       .expect(200)
 
@@ -172,6 +200,7 @@ describe('products (e2e)', () => {
 
     const increaseRes = await request(server)
       .post(`/products/${created.body.id}/increase-stock`)
+      .set('Authorization', authToken)
       .send({ quantity: 8 })
       .expect(200)
 
@@ -181,6 +210,7 @@ describe('products (e2e)', () => {
   it('should return 409 Conflict when attempting to decrease more stock than available', async () => {
     const created = await request(server)
       .post('/products')
+      .set('Authorization', authToken)
       .send({
         name: 'Low Stock Item',
         price: 30,
@@ -190,6 +220,7 @@ describe('products (e2e)', () => {
 
     const response = await request(server)
       .post(`/products/${created.body.id}/decrease-stock`)
+      .set('Authorization', authToken)
       .send({ quantity: 5 })
       .expect(409)
 
@@ -199,6 +230,7 @@ describe('products (e2e)', () => {
   it('should prevent race condition when two concurrent requests try to take the last remaining unit', async () => {
     const created = await request(server)
       .post('/products')
+      .set('Authorization', authToken)
       .send({
         name: 'Rare Item (Only 1 left)',
         price: 999.99,
@@ -210,8 +242,8 @@ describe('products (e2e)', () => {
 
     // Two concurrent users trying to buy/reserve the same single unit
     const [res1, res2] = await Promise.all([
-      request(server).post(`/products/${productId}/decrease-stock`).send({ quantity: 1 }),
-      request(server).post(`/products/${productId}/decrease-stock`).send({ quantity: 1 }),
+      request(server).post(`/products/${productId}/decrease-stock`).set('Authorization', authToken).send({ quantity: 1 }),
+      request(server).post(`/products/${productId}/decrease-stock`).set('Authorization', authToken).send({ quantity: 1 }),
     ])
 
     const statusCodes = [res1.status, res2.status].sort()
@@ -224,13 +256,14 @@ describe('products (e2e)', () => {
     expect(conflictedRes.body).toEqual({ error: 'Insufficient stock' })
 
     // Verify database state has exactly 0 stock
-    const getRes = await request(server).get(`/products/${productId}`).expect(200)
+    const getRes = await request(server).get(`/products/${productId}`).set('Authorization', authToken).expect(200)
     expect(getRes.body.stock).toBe(0)
   })
 
   it('should support categories and tags in create, update, and filtering', async () => {
     const created = await request(server)
       .post('/products')
+      .set('Authorization', authToken)
       .send({
         name: 'Gaming Laptop RTX',
         price: 2500,
@@ -244,12 +277,14 @@ describe('products (e2e)', () => {
 
     const filterCategory = await request(server)
       .get('/products?category=Gaming')
+      .set('Authorization', authToken)
       .expect(200)
 
     expect(filterCategory.body.data.some((p: { id: string }) => p.id === created.body.id)).toBe(true)
 
     const filterTag = await request(server)
       .get('/products?tag=rtx4080')
+      .set('Authorization', authToken)
       .expect(200)
 
     expect(filterTag.body.data.some((p: { id: string }) => p.id === created.body.id)).toBe(true)
@@ -258,6 +293,7 @@ describe('products (e2e)', () => {
   it('should soft delete and restore a product', async () => {
     const created = await request(server)
       .post('/products')
+      .set('Authorization', authToken)
       .send({
         name: 'Product for Soft Delete Test',
         price: 120,
@@ -269,16 +305,19 @@ describe('products (e2e)', () => {
     // Soft delete
     await request(server)
       .delete(`/products/${productId}`)
+      .set('Authorization', authToken)
       .expect(204)
 
     // Standard show should return 404
     await request(server)
       .get(`/products/${productId}`)
+      .set('Authorization', authToken)
       .expect(404)
 
     // Show with includeDeleted=true should return product
     const getDeleted = await request(server)
       .get(`/products/${productId}?includeDeleted=true`)
+      .set('Authorization', authToken)
       .expect(200)
 
     expect(getDeleted.body.deletedAt).not.toBeNull()
@@ -286,6 +325,7 @@ describe('products (e2e)', () => {
     // Restore product
     const restored = await request(server)
       .post(`/products/${productId}/restore`)
+      .set('Authorization', authToken)
       .expect(200)
 
     expect(restored.body.deletedAt).toBeNull()
@@ -293,12 +333,14 @@ describe('products (e2e)', () => {
     // Now standard show should work again
     await request(server)
       .get(`/products/${productId}`)
+      .set('Authorization', authToken)
       .expect(200)
   })
 
   it('should track stock movements history on stock changes', async () => {
     const created = await request(server)
       .post('/products')
+      .set('Authorization', authToken)
       .send({
         name: 'Audited Inventory Item',
         price: 80,
@@ -311,18 +353,21 @@ describe('products (e2e)', () => {
     // Decrease stock
     await request(server)
       .post(`/products/${productId}/decrease-stock`)
+      .set('Authorization', authToken)
       .send({ quantity: 5, reason: 'Customer order #1001' })
       .expect(200)
 
     // Increase stock
     await request(server)
       .post(`/products/${productId}/increase-stock`)
+      .set('Authorization', authToken)
       .send({ quantity: 15, reason: 'Supplier restock #4002' })
       .expect(200)
 
     // Retrieve stock movements
     const movementsRes = await request(server)
       .get(`/products/${productId}/stock-movements`)
+      .set('Authorization', authToken)
       .expect(200)
 
     expect(movementsRes.body).toHaveProperty('data')

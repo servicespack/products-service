@@ -1,6 +1,9 @@
 import type { Request, Response } from 'express'
 import express from 'express'
 import { ProductsController } from '../../adapters/controllers/products.controller'
+import { ProductsMcpController } from '../../adapters/mcp'
+import { authMiddleware } from '../../adapters/middlewares/auth.middleware'
+import { CancelReservationUseCase } from '../../application/use-cases/products/cancel-reservation.use-case'
 import { CreateProductUseCase } from '../../application/use-cases/products/create-product.use-case'
 import { DecreaseStockUseCase } from '../../application/use-cases/products/decrease-stock.use-case'
 import { DeleteProductUseCase } from '../../application/use-cases/products/delete-product.use-case'
@@ -8,12 +11,14 @@ import { GetProductByIdUseCase } from '../../application/use-cases/products/get-
 import { IncreaseStockUseCase } from '../../application/use-cases/products/increase-stock.use-case'
 import { ListProductsUseCase } from '../../application/use-cases/products/list-products.use-case'
 import { ListStockMovementsUseCase } from '../../application/use-cases/products/list-stock-movements.use-case'
+import { ReserveProductUseCase } from '../../application/use-cases/products/reserve-product.use-case'
 import { RestoreProductUseCase } from '../../application/use-cases/products/restore-product.use-case'
 import { UpdateProductUseCase } from '../../application/use-cases/products/update-product.use-case'
 import { ProductModel } from '../database/mongoose/models/product.model'
 import { StockMovementModel } from '../database/mongoose/models/stock-movement.model'
 import { MongooseProductRepository } from '../database/mongoose/repositories/mongoose-product.repository'
 import { MongooseStockMovementRepository } from '../database/mongoose/repositories/mongoose-stock-movement.repository'
+import { createMcpRouter, createProductsMcpServer } from '../mcp'
 
 const router = express.Router()
 
@@ -31,6 +36,9 @@ const restoreProductUseCase = new RestoreProductUseCase(productRepository)
 const decreaseStockUseCase = new DecreaseStockUseCase(productRepository, stockMovementRepository)
 const increaseStockUseCase = new IncreaseStockUseCase(productRepository, stockMovementRepository)
 const listStockMovementsUseCase = new ListStockMovementsUseCase(productRepository, stockMovementRepository)
+const reserveProductUseCase = new ReserveProductUseCase(decreaseStockUseCase)
+
+const cancelReservationUseCase = new CancelReservationUseCase(increaseStockUseCase)
 
 // Controllers
 const productsController = new ProductsController({
@@ -44,6 +52,20 @@ const productsController = new ProductsController({
   increaseStockUseCase,
   listStockMovementsUseCase,
 })
+
+const productsMcpController = new ProductsMcpController({
+  listProductsUseCase,
+  getProductByIdUseCase,
+  reserveProductUseCase,
+  cancelReservationUseCase,
+  listStockMovementsUseCase,
+})
+
+// MCP Infrastructure
+const mcpRouter = createMcpRouter(() => createProductsMcpServer(productsMcpController))
+
+router.use(authMiddleware)
+router.use(mcpRouter)
 
 router.post('/products', (req: Request, res: Response) => productsController.create(req, res))
 router.get('/products', (req: Request, res: Response) => productsController.list(req, res))

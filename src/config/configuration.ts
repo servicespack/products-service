@@ -11,6 +11,9 @@ const configurationSchema = z.object({
       port: z.string().default('3000'),
     }),
   }),
+  auth: z.object({
+    jwtSecret: z.string().default('secret'),
+  }),
 })
 
 export type Configuration = z.infer<typeof configurationSchema>
@@ -24,5 +27,8 @@ export const configuration: Configuration = configurationSchema.parse({
     http: {
       port: process.env.HTTP_SERVER_PORT || process.env.SERVER_PORT || '3000',
     },
+  },
+  auth: {
+    jwtSecret: process.env.JWT_SECRET || 'secret',
   },
 })
