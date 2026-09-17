@@ -169,6 +169,22 @@ describe(ProductsController.name, () => {
         pageSize: 10,
       })
     })
+
+    it('should return 400 when query parameter contains non-finite number', async () => {
+      const request = {
+        query: {
+          minPrice: 'Infinity',
+        },
+      } as unknown as Request
+
+      await controller.list(request, mockResponse)
+
+      expect(mockResponse.status).toHaveBeenCalledWith(400)
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Failed to process request. Please verify the input data and try again.',
+      })
+      expect(listProductsUseCase.execute).not.toHaveBeenCalled()
+    })
   })
 
   describe('show', () => {

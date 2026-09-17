@@ -7,12 +7,12 @@ export const ListProductsQueryDto = z.object({
   tag: z.string().optional(),
   minPrice: z
     .string()
-    .refine(val => !Number.isNaN(Number(val)), { message: 'minPrice must be a valid number' })
+    .refine(val => Number.isFinite(Number(val)), { message: 'minPrice must be a valid number' })
     .transform(Number)
     .optional(),
   maxPrice: z
     .string()
-    .refine(val => !Number.isNaN(Number(val)), { message: 'maxPrice must be a valid number' })
+    .refine(val => Number.isFinite(Number(val)), { message: 'maxPrice must be a valid number' })
     .transform(Number)
     .optional(),
   active: z
@@ -29,17 +29,17 @@ export const ListProductsQueryDto = z.object({
     .optional(),
   page: z
     .string()
-    .refine(val => !Number.isNaN(Number(val)), { message: 'page must be a valid number' })
+    .refine(val => Number.isFinite(Number(val)), { message: 'page must be a valid number' })
     .transform(Number)
     .optional(),
   pageSize: z
     .string()
-    .refine(val => !Number.isNaN(Number(val)), { message: 'pageSize must be a valid number' })
+    .refine(val => Number.isFinite(Number(val)), { message: 'pageSize must be a valid number' })
     .transform(Number)
     .optional(),
   size: z
     .string()
-    .refine(val => !Number.isNaN(Number(val)), { message: 'size must be a valid number' })
+    .refine(val => Number.isFinite(Number(val)), { message: 'size must be a valid number' })
     .transform(Number)
     .optional(),
 })
