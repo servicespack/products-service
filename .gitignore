@@ -106,3 +106,5 @@ dist
 # Custom
 temp/
 sqlite.db
+.stryker-tmp/
+reports/
