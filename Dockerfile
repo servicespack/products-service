@@ -1,44 +1,30 @@
-# Stage 1: Base
-FROM node:24-alpine AS base
+# Build stage
+FROM node:24-alpine AS builder
 
-WORKDIR /app
+WORKDIR /usr/src/app
 
-# Stage 2: Dependencies
-FROM base AS dependencies
-
-COPY package.json package-lock.json ./
-
+COPY package*.json ./
 RUN npm ci
 
-# Stage 3: Builder
-FROM base AS builder
+COPY tsconfig.json tsdown.config.mts ./
+COPY src/ ./src/
 
-COPY package.json package-lock.json ./
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY . .
+RUN npm run build && \
+    npm prune --omit=dev
 
-RUN npm run build
-
-# Stage 4: Production dependencies
-FROM base AS prod-dependencies
-
-COPY package.json package-lock.json ./
-
-RUN npm ci --omit=dev
-
-# Stage 5: Runner
+# Production stage
 FROM node:24-alpine AS runner
 
-WORKDIR /app
+WORKDIR /usr/src/app
 
 ENV NODE_ENV=production
 
-COPY --chown=node:node package.json ./
-COPY --chown=node:node --from=prod-dependencies /app/node_modules ./node_modules
-COPY --chown=node:node --from=builder /app/dist ./dist
-
 USER node
+
+COPY --chown=node:node package*.json ./
+COPY --chown=node:node --from=builder /usr/src/app/node_modules ./node_modules
+COPY --chown=node:node --from=builder /usr/src/app/dist ./dist
 
 EXPOSE 3000
 
-CMD ["node", "dist/index.js"]
+CMD [ "node", "dist/index.js" ]

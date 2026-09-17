@@ -2,6 +2,7 @@ node_modules
 dist
 coverage
 .git
+.gitignore
 .github
 .env
 .env.*
@@ -10,3 +11,13 @@ npm-debug.log*
 .eslintcache
 .nyc_output
 temp
+tests
+*.md
+.agents
+docker-compose.yml
+stryker.config.json
+.stryker-tmp
+reports
+vite.config.mts
+eslint.config.mjs
+LICENSE
