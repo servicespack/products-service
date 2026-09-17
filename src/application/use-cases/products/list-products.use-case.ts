@@ -1,7 +1,7 @@
 import type { Product } from '../../../domain/entities/product.entity'
 import type { IProductRepository } from '../../../domain/repositories/product.repository.interface'
-import { InvalidPaginationError } from '../../../domain/errors'
 import type { ListProductsRequest } from '../../dtos/list-products.model'
+import { InvalidPaginationError } from '../../../domain/errors'
 
 export class ListProductsUseCase {
   constructor(

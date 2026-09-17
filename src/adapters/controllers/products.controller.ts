@@ -10,6 +10,7 @@ import type { RestoreProductUseCase } from '../../application/use-cases/products
 import type { UpdateProductUseCase } from '../../application/use-cases/products/update-product.use-case'
 import { ChangeStockDto } from '../dtos/change-stock.dto'
 import { CreateProductDto } from '../dtos/create-product.dto'
+import { ListProductsQueryDto } from '../dtos/list-products-query.dto'
 import { UpdateProductDto } from '../dtos/update-product.dto'
 import { handleHttpError } from '../helpers/http-error.helper'
 
@@ -30,19 +31,19 @@ export class ProductsController {
 
   async list(request: Request, response: Response) {
     try {
-      const { page, size, pageSize, search, sku, category, tag, minPrice, maxPrice, active, includeDeleted, onlyDeleted } = request.query
+      const query = ListProductsQueryDto.parse(request.query)
       const result = await this.dependencies.listProductsUseCase.execute({
-        search: search as string,
-        sku: sku as string,
-        category: category as string,
-        tag: tag as string,
-        minPrice: minPrice !== undefined && !Number.isNaN(Number(minPrice)) ? Number(minPrice) : undefined,
-        maxPrice: maxPrice !== undefined && !Number.isNaN(Number(maxPrice)) ? Number(maxPrice) : undefined,
-        active: active !== undefined ? active === 'true' : undefined,
-        includeDeleted: includeDeleted !== undefined ? includeDeleted === 'true' : undefined,
-        onlyDeleted: onlyDeleted !== undefined ? onlyDeleted === 'true' : undefined,
-        page: page && !Number.isNaN(Number(page)) ? Number(page) : undefined,
-        pageSize: (pageSize || size) && !Number.isNaN(Number(pageSize || size)) ? Number(pageSize || size) : undefined,
+        search: query.search,
+        sku: query.sku,
+        category: query.category,
+        tag: query.tag,
+        minPrice: query.minPrice,
+        maxPrice: query.maxPrice,
+        active: query.active,
+        includeDeleted: query.includeDeleted,
+        onlyDeleted: query.onlyDeleted,
+        page: query.page,
+        pageSize: query.pageSize || query.size,
       })
       return response.status(200).json({ data: result })
     }
@@ -131,12 +132,12 @@ export class ProductsController {
 
   async listStockMovements(request: Request, response: Response) {
     try {
-      const { page, size, pageSize } = request.query
+      const query = ListProductsQueryDto.pick({ page: true, size: true, pageSize: true }).parse(request.query)
       const movements = await this.dependencies.listStockMovementsUseCase.execute(
         request.params.id as string,
         {
-          page: page && !Number.isNaN(Number(page)) ? Number(page) : undefined,
-          pageSize: (pageSize || size) && !Number.isNaN(Number(pageSize || size)) ? Number(pageSize || size) : undefined,
+          page: query.page,
+          pageSize: query.pageSize || query.size,
         },
       )
       return response.status(200).json({ data: movements })
