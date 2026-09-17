@@ -160,7 +160,7 @@ describe('createMcpRouter', () => {
         .send({ jsonrpc: '2.0', id: 1, method: 'ping' })
         .expect(500)
 
-      expect(postRes.body).toEqual({ error: 'Transport processing failure' })
+      expect(postRes.body).toEqual({ error: 'Failed to process MCP message' })
     }
     finally {
       abortController.abort()

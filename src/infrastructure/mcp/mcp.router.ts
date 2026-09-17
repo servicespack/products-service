@@ -50,9 +50,9 @@ export function createMcpRouter(mcpServerOrFactory: McpServer | McpServerFactory
 
       await server.connect(transport)
     }
-    catch (error) {
+    catch {
       if (!res.headersSent) {
-        res.status(500).json({ error: error instanceof Error ? error.message : 'Internal Server Error' })
+        res.status(500).json({ error: 'Failed to establish MCP connection' })
       }
     }
   }
@@ -68,9 +68,9 @@ export function createMcpRouter(mcpServerOrFactory: McpServer | McpServerFactory
 
       await transport.handlePostMessage(req, res, req.body)
     }
-    catch (error) {
+    catch {
       if (!res.headersSent) {
-        res.status(500).json({ error: error instanceof Error ? error.message : 'Internal Server Error' })
+        res.status(500).json({ error: 'Failed to process MCP message' })
       }
     }
   }

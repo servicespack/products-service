@@ -88,10 +88,10 @@ export class ProductsMcpController {
       }
     }
     catch (error) {
-      this.logOperation('call_tool', { tool: 'search_products', params: input }, startTime, false)
+      this.logOperation('call_tool', { tool: 'search_products', params: input, error }, startTime, false)
       return {
         isError: true,
-        content: [{ type: 'text', text: `Error searching products: ${error instanceof Error ? error.message : String(error)}` }],
+        content: [{ type: 'text', text: `An error occurred while searching products.` }],
       }
     }
   }
@@ -122,7 +122,7 @@ export class ProductsMcpController {
       }
     }
     catch (error) {
-      this.logOperation('call_tool', { tool: 'get_product_details', params: input }, startTime, false)
+      this.logOperation('call_tool', { tool: 'get_product_details', params: input, error }, startTime, false)
       if (error instanceof ProductNotFoundError) {
         return {
           isError: true,
@@ -131,7 +131,7 @@ export class ProductsMcpController {
       }
       return {
         isError: true,
-        content: [{ type: 'text', text: `Failed to get product details: ${error instanceof Error ? error.message : String(error)}` }],
+        content: [{ type: 'text', text: `An error occurred while getting product details.` }],
       }
     }
   }
@@ -160,7 +160,7 @@ export class ProductsMcpController {
       }
     }
     catch (error) {
-      this.logOperation('call_tool', { tool: 'reserve_product', params: input }, startTime, false)
+      this.logOperation('call_tool', { tool: 'reserve_product', params: input, error }, startTime, false)
       if (error instanceof ProductNotFoundError) {
         return {
           isError: true,
@@ -181,7 +181,7 @@ export class ProductsMcpController {
       }
       return {
         isError: true,
-        content: [{ type: 'text', text: `Failed to reserve product: ${error instanceof Error ? error.message : String(error)}` }],
+        content: [{ type: 'text', text: `An error occurred while reserving the product.` }],
       }
     }
   }
@@ -210,7 +210,7 @@ export class ProductsMcpController {
       }
     }
     catch (error) {
-      this.logOperation('call_tool', { tool: 'cancel_reservation', params: input }, startTime, false)
+      this.logOperation('call_tool', { tool: 'cancel_reservation', params: input, error }, startTime, false)
       if (error instanceof ProductNotFoundError) {
         return {
           isError: true,
@@ -225,7 +225,7 @@ export class ProductsMcpController {
       }
       return {
         isError: true,
-        content: [{ type: 'text', text: `Failed to cancel reservation: ${error instanceof Error ? error.message : String(error)}` }],
+        content: [{ type: 'text', text: `An error occurred while cancelling the reservation.` }],
       }
     }
   }
@@ -242,10 +242,10 @@ export class ProductsMcpController {
       }
     }
     catch (error) {
-      this.logOperation('call_tool', { tool: 'get_stock_history', params: input }, startTime, false)
+      this.logOperation('call_tool', { tool: 'get_stock_history', params: input, error }, startTime, false)
       return {
         isError: true,
-        content: [{ type: 'text', text: `Failed to get stock history: ${error instanceof Error ? error.message : String(error)}` }],
+        content: [{ type: 'text', text: `An error occurred while getting the stock history.` }],
       }
     }
   }

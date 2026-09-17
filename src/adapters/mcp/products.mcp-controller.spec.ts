@@ -103,7 +103,7 @@ describe(ProductsMcpController.name, () => {
     it('should throw error if neither id nor sku provided', async () => {
       const result = await controller.getProductDetails({})
       expect(result.isError).toBe(true)
-      expect(getText(result)).toContain('Must provide either id or sku')
+      expect(getText(result)).toContain('An error occurred while getting product details.')
     })
   })
 
