@@ -146,17 +146,17 @@ describe(MongooseProductRepository.name, () => {
       const product = new Product({ id: 'invalid-id', name: 'Product', price: 10 })
 
       await expect(repository.update(product)).rejects.toThrow('Invalid product ID')
-      expect(mockModel.findByIdAndUpdate).not.toHaveBeenCalled()
+      expect(mockModel.findOneAndUpdate).not.toHaveBeenCalled()
     })
 
     it('should throw error when document is not found', async () => {
       const validId = new mongoose.Types.ObjectId().toHexString()
       const product = new Product({ id: validId, name: 'Product', price: 10 })
 
-      vi.mocked(mockModel.findByIdAndUpdate as any).mockResolvedValueOnce(null)
+      vi.mocked(mockModel.findOneAndUpdate as any).mockResolvedValueOnce(null)
 
       await expect(repository.update(product)).rejects.toThrow('Product not found')
-      expect(mockModel.findByIdAndUpdate).toHaveBeenCalled()
+      expect(mockModel.findOneAndUpdate).toHaveBeenCalled()
     })
 
     it('should update and return domain product', async () => {
@@ -175,7 +175,7 @@ describe(MongooseProductRepository.name, () => {
         updatedAt: new Date(),
       }
 
-      vi.mocked(mockModel.findByIdAndUpdate as any).mockResolvedValueOnce(mockDoc)
+      vi.mocked(mockModel.findOneAndUpdate as any).mockResolvedValueOnce(mockDoc)
 
       const product = new Product({
         id: mockId.toHexString(),
@@ -189,8 +189,8 @@ describe(MongooseProductRepository.name, () => {
 
       const result = await repository.update(product)
 
-      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(
-        mockId.toHexString(),
+      expect(mockModel.findOneAndUpdate).toHaveBeenCalledWith(
+        { _id: mockId.toHexString(), deletedAt: null },
         {
           name: 'Updated Monitor',
           price: 349.99,
@@ -300,6 +300,7 @@ describe(MongooseProductRepository.name, () => {
       }
 
       const mockQuery = {
+        sort: vi.fn().mockReturnThis(),
         skip: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         then: vi.fn((resolve: any) => resolve([mockDoc])),
@@ -316,6 +317,7 @@ describe(MongooseProductRepository.name, () => {
 
     it('should apply all filters including category and tag and pagination', async () => {
       const mockQuery = {
+        sort: vi.fn().mockReturnThis(),
         skip: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         then: vi.fn((resolve: any) => resolve([])),

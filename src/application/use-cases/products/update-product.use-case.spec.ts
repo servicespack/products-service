@@ -44,7 +44,6 @@ describe(UpdateProductUseCase.name, () => {
       sku: 'SKU-UPDATED',
       categories: ['Peripherals'],
       tags: ['wireless'],
-      stock: 20,
       active: false,
     }
 
@@ -58,7 +57,7 @@ describe(UpdateProductUseCase.name, () => {
     expect(result.sku).toBe('SKU-UPDATED')
     expect(result.categories).toEqual(['Peripherals'])
     expect(result.tags).toEqual(['wireless'])
-    expect(result.stock).toBe(20)
+    expect(result.stock).toBe(10)
     expect(result.active).toBe(false)
   })
 

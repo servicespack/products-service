@@ -35,8 +35,8 @@ export class MongooseProductRepository implements IProductRepository {
       throw new Error('Invalid product ID')
     }
 
-    const doc = await this.model.findByIdAndUpdate(
-      product.id,
+    const doc = await this.model.findOneAndUpdate(
+      { _id: product.id, deletedAt: null },
       ProductMapper.toPersistence(product),
       { new: true },
     )
@@ -85,7 +85,8 @@ export class MongooseProductRepository implements IProductRepository {
     }
 
     if (params?.search && params.search !== '') {
-      query.name = { $regex: params.search, $options: 'i' }
+      const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      query.name = { $regex: escapeRegExp(params.search), $options: 'i' }
     }
 
     if (params?.sku && params.sku !== '') {
@@ -115,7 +116,7 @@ export class MongooseProductRepository implements IProductRepository {
       query.price = priceQuery
     }
 
-    let queryFind = this.model.find(query)
+    let queryFind = this.model.find(query).sort({ _id: 1 })
 
     if (params?.page && params?.pageSize) {
       queryFind = queryFind.skip((params.page - 1) * params.pageSize).limit(params.pageSize)

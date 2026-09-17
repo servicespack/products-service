@@ -133,11 +133,7 @@ export class Product {
     categories?: string[]
     tags?: string[]
     active?: boolean
-    stock?: number
   }): void {
-    if (props.stock !== undefined && (props.stock < 0 || !Number.isInteger(props.stock))) {
-      throw new InvalidStockQuantityError('Stock must be a non-negative integer')
-    }
     if (props.name !== undefined) {
       this._name = props.name
     }
@@ -159,9 +155,6 @@ export class Product {
     if (props.active !== undefined) {
       this._active = props.active
     }
-    if (props.stock !== undefined) {
-      this._stock = props.stock
-    }
   }
 
   toJSON() {
@@ -171,8 +164,8 @@ export class Product {
       price: this._price,
       description: this._description,
       sku: this._sku,
-      categories: this._categories,
-      tags: this._tags,
+      categories: [...this._categories],
+      tags: [...this._tags],
       active: this._active,
       stock: this._stock,
       deletedAt: this._deletedAt,

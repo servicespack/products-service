@@ -116,6 +116,7 @@ describe('product Entity', () => {
     const product = new Product({
       name: 'Keyboard',
       price: 100,
+      stock: 0,
     })
 
     product.update({
@@ -126,7 +127,6 @@ describe('product Entity', () => {
       categories: ['Accessories', 'Peripherals'],
       tags: ['rgb', 'mechanical'],
       active: false,
-      stock: 5,
     })
 
     expect(product.name).toBe('Mechanical Keyboard')
@@ -136,7 +136,7 @@ describe('product Entity', () => {
     expect(product.categories).toEqual(['Accessories', 'Peripherals'])
     expect(product.tags).toEqual(['rgb', 'mechanical'])
     expect(product.active).toBe(false)
-    expect(product.stock).toBe(5)
+    expect(product.stock).toBe(0)
   })
 
   it('should support soft delete and restore', () => {
@@ -153,12 +153,6 @@ describe('product Entity', () => {
     product.restore()
     expect(product.deletedAt).toBeNull()
     expect(product.isDeleted).toBe(false)
-  })
-
-  it('should throw error when updating stock with invalid values', () => {
-    const product = new Product({ name: 'Keyboard', price: 100 })
-    expect(() => product.update({ stock: -5 })).toThrow(InvalidStockQuantityError)
-    expect(() => product.update({ stock: 2.5 })).toThrow(InvalidStockQuantityError)
   })
 
   it('should serialize to JSON correctly', () => {

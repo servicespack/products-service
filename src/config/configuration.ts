@@ -12,7 +12,7 @@ const configurationSchema = z.object({
     }),
   }),
   auth: z.object({
-    jwtSecret: z.string().default('secret'),
+    jwtSecret: z.string().min(1, 'JWT_SECRET is required'),
   }),
 })
 
@@ -29,6 +29,6 @@ export const configuration: Configuration = configurationSchema.parse({
     },
   },
   auth: {
-    jwtSecret: process.env.JWT_SECRET || 'secret',
+    jwtSecret: process.env.JWT_SECRET,
   },
 })

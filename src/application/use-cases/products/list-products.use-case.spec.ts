@@ -1,6 +1,7 @@
 import type { IProductRepository } from '../../../domain/repositories/product.repository.interface'
 import { faker } from '@faker-js/faker'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { InvalidPaginationError } from '../../../domain/errors'
 import { ListProductsUseCase } from './list-products.use-case'
 
 describe(ListProductsUseCase.name, () => {
@@ -19,6 +20,18 @@ describe(ListProductsUseCase.name, () => {
       incrementStock: vi.fn(),
     }
     listProductsUseCase = new ListProductsUseCase(productRepository)
+  })
+
+  it('should throw InvalidPaginationError when page is less than 1', async () => {
+    await expect(listProductsUseCase.execute({ page: 0 }))
+      .rejects
+      .toThrow(InvalidPaginationError)
+  })
+
+  it('should throw InvalidPaginationError when pageSize is less than 1', async () => {
+    await expect(listProductsUseCase.execute({ pageSize: 0 }))
+      .rejects
+      .toThrow(InvalidPaginationError)
   })
 
   it('should return a list of products with default params', async () => {

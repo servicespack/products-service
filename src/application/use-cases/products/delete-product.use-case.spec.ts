@@ -30,24 +30,21 @@ describe(DeleteProductUseCase.name, () => {
       price: 50,
     })
 
-    vi.mocked(productRepository.findById).mockResolvedValueOnce(existingProduct)
     vi.mocked(productRepository.delete).mockResolvedValueOnce(true)
 
     await deleteProductUseCase.execute(existingProduct.id!)
 
-    expect(productRepository.findById).toHaveBeenCalledWith(existingProduct.id)
     expect(productRepository.delete).toHaveBeenCalledWith(existingProduct.id)
   })
 
   it('should throw ProductNotFoundError when product does not exist', async () => {
-    vi.mocked(productRepository.findById).mockResolvedValueOnce(null)
+    vi.mocked(productRepository.delete).mockResolvedValueOnce(false)
 
     const id = faker.string.uuid()
     await expect(deleteProductUseCase.execute(id))
       .rejects
       .toThrow(ProductNotFoundError)
 
-    expect(productRepository.findById).toHaveBeenCalledWith(id)
-    expect(productRepository.delete).not.toHaveBeenCalled()
+    expect(productRepository.delete).toHaveBeenCalledWith(id)
   })
 })

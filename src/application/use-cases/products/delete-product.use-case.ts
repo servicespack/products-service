@@ -7,12 +7,10 @@ export class DeleteProductUseCase {
   ) {}
 
   async execute(id: string): Promise<void> {
-    const product = await this.productRepository.findById(id)
+    const success = await this.productRepository.delete(id)
 
-    if (product === null) {
+    if (!success) {
       throw new ProductNotFoundError()
     }
-
-    await this.productRepository.delete(id)
   }
 }

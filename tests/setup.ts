@@ -11,6 +11,7 @@ const mongod = await MongoMemoryServer.create({
 const uri = mongod.getUri()
 
 process.env.DATABASE_URI = uri
+process.env.JWT_SECRET = 'test-secret'
 
 await mongoose.connect(uri)
 

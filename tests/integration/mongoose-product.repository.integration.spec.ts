@@ -91,7 +91,6 @@ describe('mongooseProductRepository (In-Memory MongoDB Integration)', () => {
       price: 120,
       description: 'New Description',
       sku: 'NEW-SKU',
-      stock: 10,
       active: false,
     })
 
@@ -102,7 +101,7 @@ describe('mongooseProductRepository (In-Memory MongoDB Integration)', () => {
     expect(updated.price).toBe(120)
     expect(updated.description).toBe('New Description')
     expect(updated.sku).toBe('NEW-SKU')
-    expect(updated.stock).toBe(10)
+    expect(updated.stock).toBe(5)
     expect(updated.active).toBe(false)
 
     const found = await repository.findById(product.id!)

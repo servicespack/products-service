@@ -8,7 +8,9 @@ describe('configuration', () => {
 
   it('should use default values when environment variables are not set', async () => {
     const originalEnv = process.env
-    process.env = {}
+    process.env = {
+      JWT_SECRET: 'secret',
+    }
 
     const { configuration } = await import('../src/config')
 
