@@ -266,10 +266,80 @@ describe('mcp server (e2e)', () => {
     const parsed = JSON.parse(callResult.result.content[0].text)
     expect(parsed.message).toContain('Successfully reserved 2 unit(s)')
     expect(parsed.product.stock).toBe(3)
+    expect(parsed.reservationId).toBeDefined()
 
     // Verify stock in database via HTTP API
     const checkProduct = await request(httpServer).get(`/products/${productId}`).set('Authorization', `Bearer ${authToken}`).expect(200)
     expect(checkProduct.body.stock).toBe(3)
+
+    // Call cancel_reservation with the reservationId
+    await fetch(`${baseUrl}/messages?sessionId=${sessionId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 41,
+        method: 'tools/call',
+        params: {
+          name: 'cancel_reservation',
+          arguments: {
+            reservationId: parsed.reservationId,
+            reason: 'Order cancelled',
+          },
+        },
+      }),
+    })
+
+    const cancelResult = (await sseQueue.nextMessage()) as {
+      jsonrpc: string
+      id: number
+      result: {
+        content: Array<{ type: string, text: string }>
+        isError?: boolean
+      }
+    }
+
+    expect(cancelResult.id).toBe(41)
+    expect(cancelResult.result.isError).toBeUndefined()
+    const cancelParsed = JSON.parse(cancelResult.result.content[0].text)
+    expect(cancelParsed.product.stock).toBe(5)
+
+    // Verify stock restored in database
+    const restoredProduct = await request(httpServer).get(`/products/${productId}`).set('Authorization', `Bearer ${authToken}`).expect(200)
+    expect(restoredProduct.body.stock).toBe(5)
+
+    // Repeated cancellation should fail and not inflate stock
+    await fetch(`${baseUrl}/messages?sessionId=${sessionId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 42,
+        method: 'tools/call',
+        params: {
+          name: 'cancel_reservation',
+          arguments: {
+            reservationId: parsed.reservationId,
+          },
+        },
+      }),
+    })
+
+    const repeatedCancelResult = (await sseQueue.nextMessage()) as {
+      jsonrpc: string
+      id: number
+      result: {
+        content: Array<{ type: string, text: string }>
+        isError?: boolean
+      }
+    }
+
+    expect(repeatedCancelResult.id).toBe(42)
+    expect(repeatedCancelResult.result.isError).toBe(true)
+    expect(repeatedCancelResult.result.content[0].text).toContain('has already been cancelled')
+
+    const uninflatedProduct = await request(httpServer).get(`/products/${productId}`).set('Authorization', `Bearer ${authToken}`).expect(200)
+    expect(uninflatedProduct.body.stock).toBe(5)
   })
 
   it('should return error when reserving more stock than available', async () => {

@@ -35,23 +35,25 @@ Whenever a new environment variable is introduced in the code (e.g., in `src/con
 
 The codebase follows the Clean Architecture standards established across ServicesPack microservices:
 - `src/domain/`: Enterprise business rules with zero external framework/ORM dependencies:
-  - `entities/`: Pure domain entities (`Product`, `StockMovement`) encapsulating invariants, getters, and serialization.
-  - `errors/`: Domain errors (`DomainError`, `ProductNotFoundError`, `InsufficientStockError`, `InvalidStockQuantityError`).
-  - `repositories/`: Pure repository port contracts (`IProductRepository`, `IStockMovementRepository`).
+  - `entities/`: Pure domain entities (`Product`, `StockMovement`, `Reservation`) encapsulating invariants, getters, and serialization.
+  - `errors/`: Domain errors (`DomainError`, `ProductNotFoundError`, `InsufficientStockError`, `InvalidStockQuantityError`, `InvalidPaginationError`, `ReservationNotFoundError`, `ReservationAlreadyCancelledError`).
+  - `repositories/`: Pure repository port contracts (`IProductRepository`, `IStockMovementRepository`, `IReservationRepository`).
 - `src/application/`: Application business rules:
   - `dtos/`: Boundary request models (`CreateProductRequest`, `ListProductsRequest`, `DecreaseStockRequest`, `IncreaseStockRequest`, `ReserveProductRequest`, `CancelReservationRequest`, `UpdateProductRequest`, `ListStockMovementsRequest`).
-  - `use-cases/products/`: Single-responsibility use cases (`CreateProductUseCase`, `ListProductsUseCase`, `GetProductByIdUseCase`, `UpdateProductUseCase`, `DeleteProductUseCase`, `RestoreProductUseCase`, `DecreaseStockUseCase`, `IncreaseStockUseCase`, `ReserveProductUseCase`, `CancelReservationUseCase`, `ListStockMovementsUseCase`).
+  - `interfaces/`: Application contracts (`ITransactionManager`).
+  - `use-cases/products/`: Single-responsibility use cases (`CreateProductUseCase`, `ListProductsUseCase`, `GetProductByIdUseCase`, `UpdateProductUseCase`, `DeleteProductUseCase`, `RestoreProductUseCase`, `DecreaseStockUseCase`, `IncreaseStockUseCase`, `ReserveProductUseCase`, `CancelReservationUseCase`, `ListStockMovementsUseCase`, `GetCatalogSummaryUseCase`, `GetLowStockProductsUseCase`).
 - `src/adapters/`: Interface adapters translating between delivery mechanisms and application layer:
   - `controllers/`: Express controllers (`ProductsController` consuming `ProductsControllerDependencies`).
   - `mcp/`: MCP controllers (`ProductsMcpController` consuming `ProductsMcpControllerDependencies`).
   - `middlewares/`: Express middlewares (`authMiddleware` validating JWT from headers and query parameters).
   - `dtos/`: Presentation layer validation schemas (`CreateProductDto`, `UpdateProductDto`, `ChangeStockDto`, `ListProductsQueryDto`).
-  - `helpers/`: `handleHttpError` translating domain errors to appropriate HTTP responses (`404` for not found, `409` for insufficient stock, `400` for validation/domain errors).
+  - `helpers/`: `handleHttpError` translating domain errors to appropriate HTTP responses (`404` for not found, `409` for conflict/insufficient stock, `400` for validation/domain errors).
 - `src/infrastructure/`: Frameworks, drivers, and persistence adapters:
   - `database/mongoose/`:
-    - `models/`: Mongoose schemas and models (`ProductModel`, `StockMovementModel`, `productValidationRules`, `stockMovementValidationRules`).
-    - `mappers/`: `ProductMapper`, `StockMovementMapper` mapping between Mongoose documents and pure domain instances.
-    - `repositories/`: `MongooseProductRepository` implementing `IProductRepository`, `MongooseStockMovementRepository` implementing `IStockMovementRepository`.
+    - `models/`: Mongoose schemas and models (`ProductModel`, `StockMovementModel`, `ReservationModel`, `productValidationRules`, `stockMovementValidationRules`, `reservationValidationRules`).
+    - `mappers/`: `ProductMapper`, `StockMovementMapper`, `ReservationMapper` mapping between Mongoose documents and pure domain instances.
+    - `repositories/`: `MongooseProductRepository` implementing `IProductRepository`, `MongooseStockMovementRepository` implementing `IStockMovementRepository`, `MongooseReservationRepository` implementing `IReservationRepository`.
+    - `mongoose-transaction.manager.ts`, `transaction.context.ts`: Transaction coordination with `AsyncLocalStorage`.
   - `http/`:
     - `router.ts`: Composition root wiring repositories, use cases, controller, MCP router, and Express routes.
     - `server.ts`: Express application setup, global error handling, and server export.
@@ -60,7 +62,7 @@ The codebase follows the Clean Architecture standards established across Service
     - `mcp.router.ts`: `createMcpRouter` exposing SSE endpoints (`GET /sse`, `POST /messages`, `/mcp/sse`, `/mcp/messages`) via `SSEServerTransport`.
 - `src/config/`: Configuration for environment (`configuration.ts`), database connection (`database.ts`), graceful shutdown (`cooldown.ts`), logger (`logger.ts`), and barrel export (`index.ts`).
 - `src/index.ts`: Application bootstrap entrypoint.
-- `tests/`: Root-level test suites (`tests/e2e/products.spec.ts`, `tests/e2e/mcp.spec.ts`, `tests/server.spec.ts`, `tests/integration/mongoose-product.repository.integration.spec.ts`, `tests/configuration.spec.ts`, `tests/setup.ts`).
+- `tests/`: Root-level test suites (`tests/e2e/products.spec.ts`, `tests/e2e/mcp.spec.ts`, `tests/server.spec.ts`, `tests/integration/mongoose-product.repository.integration.spec.ts`, `tests/integration/atomic-stock.integration.spec.ts`, `tests/configuration.spec.ts`, `tests/setup.ts`).
 
 ## File Structure
 
@@ -74,9 +76,11 @@ The codebase follows the Clean Architecture standards established across Service
 │   │   ├── dtos/
 │   │   │   ├── change-stock.dto.ts
 │   │   │   ├── create-product.dto.ts
+│   │   │   ├── list-products-query.dto.spec.ts
 │   │   │   ├── list-products-query.dto.ts
 │   │   │   └── update-product.dto.ts
 │   │   ├── helpers/
+│   │   │   ├── http-error.helper.spec.ts
 │   │   │   └── http-error.helper.ts
 │   │   ├── mcp/
 │   │   │   ├── index.ts
@@ -95,6 +99,8 @@ The codebase follows the Clean Architecture standards established across Service
 │   │   │   ├── list-stock-movements.model.ts
 │   │   │   ├── reserve-product.model.ts
 │   │   │   └── update-product.model.ts
+│   │   ├── interfaces/
+│   │   │   └── transaction-manager.interface.ts
 │   │   └── use-cases/
 │   │       └── products/
 │   │           ├── cancel-reservation.use-case.spec.ts
@@ -105,6 +111,10 @@ The codebase follows the Clean Architecture standards established across Service
 │   │           ├── decrease-stock.use-case.ts
 │   │           ├── delete-product.use-case.spec.ts
 │   │           ├── delete-product.use-case.ts
+│   │           ├── get-catalog-summary.use-case.spec.ts
+│   │           ├── get-catalog-summary.use-case.ts
+│   │           ├── get-low-stock-products.use-case.spec.ts
+│   │           ├── get-low-stock-products.use-case.ts
 │   │           ├── get-product-by-id.use-case.spec.ts
 │   │           ├── get-product-by-id.use-case.ts
 │   │           ├── increase-stock.use-case.spec.ts
@@ -131,6 +141,8 @@ The codebase follows the Clean Architecture standards established across Service
 │   │   ├── entities/
 │   │   │   ├── product.entity.spec.ts
 │   │   │   ├── product.entity.ts
+│   │   │   ├── reservation.entity.spec.ts
+│   │   │   ├── reservation.entity.ts
 │   │   │   ├── stock-movement.entity.spec.ts
 │   │   │   └── stock-movement.entity.ts
 │   │   ├── errors/
@@ -139,26 +151,38 @@ The codebase follows the Clean Architecture standards established across Service
 │   │   │   ├── insufficient-stock.error.ts
 │   │   │   ├── invalid-pagination.error.ts
 │   │   │   ├── invalid-stock-quantity.error.ts
-│   │   │   └── product-not-found.error.ts
+│   │   │   ├── product-not-found.error.ts
+│   │   │   ├── reservation-already-cancelled.error.ts
+│   │   │   └── reservation-not-found.error.ts
 │   │   └── repositories/
 │   │       ├── product.repository.interface.ts
+│   │       ├── reservation.repository.interface.ts
 │   │       └── stock-movement.repository.interface.ts
 │   ├── infrastructure/
 │   │   ├── database/
 │   │   │   └── mongoose/
 │   │   │       ├── mappers/
 │   │   │       │   ├── product.mapper.ts
+│   │   │       │   ├── reservation.mapper.spec.ts
+│   │   │       │   ├── reservation.mapper.ts
 │   │   │       │   └── stock-movement.mapper.ts
 │   │   │       ├── models/
 │   │   │       │   ├── product.model.spec.ts
 │   │   │       │   ├── product.model.ts
+│   │   │       │   ├── reservation.model.spec.ts
+│   │   │       │   ├── reservation.model.ts
 │   │   │       │   ├── stock-movement.model.spec.ts
 │   │   │       │   └── stock-movement.model.ts
-│   │   │       └── repositories/
-│   │   │           ├── mongoose-product.repository.spec.ts
-│   │   │           ├── mongoose-product.repository.ts
-│   │   │           ├── mongoose-stock-movement.repository.spec.ts
-│   │   │           └── mongoose-stock-movement.repository.ts
+│   │   │       ├── repositories/
+│   │   │       │   ├── mongoose-product.repository.spec.ts
+│   │   │       │   ├── mongoose-product.repository.ts
+│   │   │       │   ├── mongoose-reservation.repository.spec.ts
+│   │   │       │   ├── mongoose-reservation.repository.ts
+│   │   │       │   ├── mongoose-stock-movement.repository.spec.ts
+│   │   │       │   └── mongoose-stock-movement.repository.ts
+│   │   │       ├── mongoose-transaction.manager.spec.ts
+│   │   │       ├── mongoose-transaction.manager.ts
+│   │   │       └── transaction.context.ts
 │   │   ├── http/
 │   │   │   ├── router.ts
 │   │   │   └── server.ts
@@ -178,6 +202,7 @@ The codebase follows the Clean Architecture standards established across Service
     ├── helpers/
     │   └── auth.helper.ts
     ├── integration/
+    │   ├── atomic-stock.integration.spec.ts
     │   └── mongoose-product.repository.integration.spec.ts
     ├── server.spec.ts
     └── setup.ts

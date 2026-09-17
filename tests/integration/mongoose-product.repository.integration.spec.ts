@@ -287,4 +287,60 @@ describe('mongooseProductRepository (In-Memory MongoDB Integration)', () => {
     const found = await repository.findById(product.id!)
     expect(found?.stock).toBe(10)
   })
+
+  it('should aggregate catalog summary correctly in real MongoDB', async () => {
+    await repository.create(new Product({
+      name: 'Product A',
+      price: 10,
+      categories: ['Electronics', 'Gadgets'],
+      stock: 10,
+      active: true,
+    }))
+    await repository.create(new Product({
+      name: 'Product B',
+      price: 30,
+      categories: ['Electronics'],
+      stock: 5,
+      active: true,
+    }))
+    // Inactive product should be excluded
+    await repository.create(new Product({
+      name: 'Inactive',
+      price: 100,
+      categories: ['Other'],
+      stock: 5,
+      active: false,
+    }))
+
+    const summary = await repository.getCatalogSummary()
+
+    expect(summary.totalProducts).toBe(2)
+    expect(summary.categories.Electronics).toBe(2)
+    expect(summary.categories.Gadgets).toBe(1)
+    expect(summary.categories.Other).toBeUndefined()
+    expect(summary.priceRange.min).toBe(10)
+    expect(summary.priceRange.max).toBe(30)
+    expect(summary.priceRange.average).toBe(20)
+  })
+
+  it('should get low stock products correctly in real MongoDB', async () => {
+    await repository.create(new Product({
+      name: 'High Stock',
+      price: 10,
+      stock: 15,
+      active: true,
+    }))
+    const lowStockProd = await repository.create(new Product({
+      name: 'Low Stock',
+      price: 20,
+      stock: 3,
+      active: true,
+    }))
+
+    const lowStockList = await repository.getLowStock(5)
+
+    expect(lowStockList).toHaveLength(1)
+    expect(lowStockList[0].id).toBe(lowStockProd.id)
+    expect(lowStockList[0].stock).toBe(3)
+  })
 })

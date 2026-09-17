@@ -1,12 +1,19 @@
 import type { CallToolResult, GetPromptResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
 import type { CancelReservationUseCase } from '../../application/use-cases/products/cancel-reservation.use-case'
+import type { GetCatalogSummaryUseCase } from '../../application/use-cases/products/get-catalog-summary.use-case'
+import type { GetLowStockProductsUseCase } from '../../application/use-cases/products/get-low-stock-products.use-case'
 import type { GetProductByIdUseCase } from '../../application/use-cases/products/get-product-by-id.use-case'
 import type { ListProductsUseCase } from '../../application/use-cases/products/list-products.use-case'
 import type { ListStockMovementsUseCase } from '../../application/use-cases/products/list-stock-movements.use-case'
 import type { ReserveProductUseCase } from '../../application/use-cases/products/reserve-product.use-case'
-import type { Product } from '../../domain/entities/product.entity'
 import { logger } from '../../config'
-import { InsufficientStockError, InvalidStockQuantityError, ProductNotFoundError } from '../../domain/errors'
+import {
+  InsufficientStockError,
+  InvalidStockQuantityError,
+  ProductNotFoundError,
+  ReservationAlreadyCancelledError,
+  ReservationNotFoundError,
+} from '../../domain/errors'
 
 export interface ProductsMcpControllerDependencies {
   readonly listProductsUseCase: ListProductsUseCase
@@ -14,6 +21,8 @@ export interface ProductsMcpControllerDependencies {
   readonly reserveProductUseCase: ReserveProductUseCase
   readonly cancelReservationUseCase: CancelReservationUseCase
   readonly listStockMovementsUseCase: ListStockMovementsUseCase
+  readonly getCatalogSummaryUseCase: GetCatalogSummaryUseCase
+  readonly getLowStockProductsUseCase: GetLowStockProductsUseCase
 }
 
 export interface SearchProductsInput {
@@ -39,8 +48,7 @@ export interface ReserveProductInput {
 }
 
 export interface CancelReservationInput {
-  readonly productId: string
-  readonly quantity?: number
+  readonly reservationId: string
   readonly reason?: string
 }
 
@@ -140,7 +148,7 @@ export class ProductsMcpController {
     const startTime = Date.now()
     try {
       const quantity = input.quantity ?? 1
-      const product = await this.dependencies.reserveProductUseCase.execute(input.productId, {
+      const { product, reservation } = await this.dependencies.reserveProductUseCase.execute(input.productId, {
         quantity,
         reason: input.reason,
       })
@@ -153,6 +161,8 @@ export class ProductsMcpController {
             type: 'text',
             text: JSON.stringify({
               message: `Successfully reserved ${quantity} unit(s) of "${product.name}".`,
+              reservationId: reservation.id,
+              reservation: reservation.toJSON(),
               product: product.toJSON(),
             }, null, 2),
           },
@@ -189,9 +199,8 @@ export class ProductsMcpController {
   async cancelReservation(input: CancelReservationInput): Promise<CallToolResult> {
     const startTime = Date.now()
     try {
-      const quantity = input.quantity ?? 1
-      const product = await this.dependencies.cancelReservationUseCase.execute(input.productId, {
-        quantity,
+      const { product, reservation } = await this.dependencies.cancelReservationUseCase.execute({
+        reservationId: input.reservationId,
         reason: input.reason,
       })
 
@@ -202,7 +211,8 @@ export class ProductsMcpController {
           {
             type: 'text',
             text: JSON.stringify({
-              message: `Successfully cancelled reservation of ${quantity} unit(s) of "${product.name}".`,
+              message: `Successfully cancelled reservation "${reservation.id}".`,
+              reservation: reservation.toJSON(),
               product: product.toJSON(),
             }, null, 2),
           },
@@ -211,16 +221,22 @@ export class ProductsMcpController {
     }
     catch (error) {
       this.logOperation('call_tool', { tool: 'cancel_reservation', params: input, error }, startTime, false)
+      if (error instanceof ReservationNotFoundError) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Reservation with ID "${input.reservationId}" not found.` }],
+        }
+      }
+      if (error instanceof ReservationAlreadyCancelledError) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `Reservation with ID "${input.reservationId}" has already been cancelled.` }],
+        }
+      }
       if (error instanceof ProductNotFoundError) {
         return {
           isError: true,
-          content: [{ type: 'text', text: `Product with ID "${input.productId}" not found.` }],
-        }
-      }
-      if (error instanceof InvalidStockQuantityError) {
-        return {
-          isError: true,
-          content: [{ type: 'text', text: error.message }],
+          content: [{ type: 'text', text: `Product associated with reservation not found.` }],
         }
       }
       return {
@@ -250,65 +266,10 @@ export class ProductsMcpController {
     }
   }
 
-  private async fetchAllActiveProducts(): Promise<Array<Product>> {
-    const pageSize = 100
-    let page = 1
-    const allProducts: Array<Product> = []
-
-    while (true) {
-      const products = await this.dependencies.listProductsUseCase.execute({
-        active: true,
-        page,
-        pageSize,
-      })
-      allProducts.push(...products)
-      if (products.length < pageSize) {
-        break
-      }
-      page++
-    }
-
-    return allProducts
-  }
-
   async getCatalogSummary(uri: string): Promise<ReadResourceResult> {
     const startTime = Date.now()
     try {
-      const products = await this.fetchAllActiveProducts()
-
-      let minPrice = 0
-      let maxPrice = 0
-      let totalPrice = 0
-
-      if (products.length > 0) {
-        minPrice = products[0].price
-        maxPrice = products[0].price
-        for (const product of products) {
-          if (product.price < minPrice) {
-            minPrice = product.price
-          }
-          if (product.price > maxPrice) {
-            maxPrice = product.price
-          }
-          totalPrice += product.price
-        }
-      }
-
-      const summary = {
-        totalProducts: products.length,
-        categories: {} as Record<string, number>,
-        priceRange: {
-          min: minPrice,
-          max: maxPrice,
-          average: products.length > 0 ? totalPrice / products.length : 0,
-        },
-      }
-
-      for (const product of products) {
-        for (const cat of product.categories) {
-          summary.categories[cat] = (summary.categories[cat] || 0) + 1
-        }
-      }
+      const summary = await this.dependencies.getCatalogSummaryUseCase.execute()
 
       this.logOperation('read_resource', { resource: 'catalog_summary' }, startTime, true)
 
@@ -331,8 +292,8 @@ export class ProductsMcpController {
   async getLowStockProducts(uri: string): Promise<ReadResourceResult> {
     const startTime = Date.now()
     try {
-      const products = await this.fetchAllActiveProducts()
-      const lowStock = products.filter(p => p.stock <= 5).map(p => ({ id: p.id, name: p.name, stock: p.stock }))
+      const products = await this.dependencies.getLowStockProductsUseCase.execute(5)
+      const lowStock = products.map(p => ({ id: p.id, name: p.name, stock: p.stock }))
 
       this.logOperation('read_resource', { resource: 'low_stock' }, startTime, true)
 

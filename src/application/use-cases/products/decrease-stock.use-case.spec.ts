@@ -21,6 +21,8 @@ describe(DecreaseStockUseCase.name, () => {
       list: vi.fn(),
       decrementStock: vi.fn(),
       incrementStock: vi.fn(),
+      getCatalogSummary: vi.fn(),
+      getLowStock: vi.fn(),
     }
     stockMovementRepository = {
       create: vi.fn(),

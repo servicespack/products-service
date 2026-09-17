@@ -1,12 +1,14 @@
 import type { Model } from 'mongoose'
 import type { Product } from '../../../../domain/entities/product.entity'
 import type {
+  CatalogSummary,
   IProductRepository,
   ListProductsParams,
 } from '../../../../domain/repositories/product.repository.interface'
 import type { IProductDoc } from '../models/product.model'
 import mongoose from 'mongoose'
 import { ProductMapper } from '../mappers/product.mapper'
+import { transactionStorage } from '../transaction.context'
 
 export class MongooseProductRepository implements IProductRepository {
   constructor(private readonly model: Model<IProductDoc>) {}
@@ -134,10 +136,11 @@ export class MongooseProductRepository implements IProductRepository {
       return null
     }
 
+    const session = transactionStorage.getStore()
     const doc = await this.model.findOneAndUpdate(
       { _id: id, deletedAt: null, stock: { $gte: quantity } },
       { $inc: { stock: -quantity } },
-      { new: true },
+      { new: true, session },
     )
 
     return doc ? ProductMapper.toDomain(doc) : null
@@ -148,12 +151,68 @@ export class MongooseProductRepository implements IProductRepository {
       return null
     }
 
+    const session = transactionStorage.getStore()
     const doc = await this.model.findOneAndUpdate(
       { _id: id, deletedAt: null },
       { $inc: { stock: quantity } },
-      { new: true },
+      { new: true, session },
     )
 
     return doc ? ProductMapper.toDomain(doc) : null
+  }
+
+  async getCatalogSummary(): Promise<CatalogSummary> {
+    const [result] = await this.model.aggregate([
+      { $match: { deletedAt: null, active: true } },
+      {
+        $facet: {
+          priceStats: [
+            {
+              $group: {
+                _id: null,
+                totalProducts: { $sum: 1 },
+                minPrice: { $min: '$price' },
+                maxPrice: { $max: '$price' },
+                avgPrice: { $avg: '$price' },
+              },
+            },
+          ],
+          categories: [
+            { $unwind: '$categories' },
+            { $group: { _id: '$categories', count: { $sum: 1 } } },
+          ],
+        },
+      },
+    ])
+
+    const stats = result?.priceStats?.[0]
+    const categoriesList: Array<{ _id: string, count: number }> = result?.categories || []
+    const categories: Record<string, number> = {}
+
+    for (const item of categoriesList) {
+      if (item._id) {
+        categories[item._id] = item.count
+      }
+    }
+
+    return {
+      totalProducts: stats?.totalProducts ?? 0,
+      categories,
+      priceRange: {
+        min: stats?.minPrice ?? 0,
+        max: stats?.maxPrice ?? 0,
+        average: stats?.avgPrice ?? 0,
+      },
+    }
+  }
+
+  async getLowStock(threshold = 5): Promise<Array<Product>> {
+    const docs = await this.model.find({
+      deletedAt: null,
+      active: true,
+      stock: { $lte: threshold },
+    })
+
+    return docs.map(doc => ProductMapper.toDomain(doc))
   }
 }

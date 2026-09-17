@@ -19,6 +19,8 @@ describe(DeleteProductUseCase.name, () => {
       list: vi.fn(),
       decrementStock: vi.fn(),
       incrementStock: vi.fn(),
+      getCatalogSummary: vi.fn(),
+      getLowStock: vi.fn(),
     }
     deleteProductUseCase = new DeleteProductUseCase(productRepository)
   })

@@ -42,20 +42,24 @@ describe('database Configuration', () => {
     expect(mongoose.connect).toHaveBeenCalledWith(configuration.database.uri)
     expect(mockDb.listCollections).toHaveBeenCalledWith({ name: 'products' })
     expect(mockDb.listCollections).toHaveBeenCalledWith({ name: 'stockmovements' })
+    expect(mockDb.listCollections).toHaveBeenCalledWith({ name: 'reservations' })
     expect(mockDb.createCollection).toHaveBeenCalledWith('products', expect.any(Object))
     expect(mockDb.createCollection).toHaveBeenCalledWith('stockmovements', expect.any(Object))
+    expect(mockDb.createCollection).toHaveBeenCalledWith('reservations', expect.any(Object))
     expect(mockDb.command).not.toHaveBeenCalled()
     expect(result).toBe(mockConnection)
     expect(logger.info).toHaveBeenCalledWith('Connected to the database')
     expect(logger.info).toHaveBeenCalledWith('Schema validation applied to products collection')
     expect(logger.info).toHaveBeenCalledWith('Schema validation applied to stockmovements collection')
+    expect(logger.info).toHaveBeenCalledWith('Schema validation applied to reservations collection')
   })
 
   it('should connect to database and apply validation if collection exists', async () => {
     const mockDb = {
       listCollections: vi.fn()
         .mockReturnValueOnce({ toArray: vi.fn().mockResolvedValue([{ name: 'products' }]) })
-        .mockReturnValueOnce({ toArray: vi.fn().mockResolvedValue([{ name: 'stockmovements' }]) }),
+        .mockReturnValueOnce({ toArray: vi.fn().mockResolvedValue([{ name: 'stockmovements' }]) })
+        .mockReturnValueOnce({ toArray: vi.fn().mockResolvedValue([{ name: 'reservations' }]) }),
       createCollection: vi.fn(),
       command: vi.fn().mockResolvedValue({}),
     }
@@ -70,9 +74,11 @@ describe('database Configuration', () => {
 
     expect(mockDb.listCollections).toHaveBeenCalledWith({ name: 'products' })
     expect(mockDb.listCollections).toHaveBeenCalledWith({ name: 'stockmovements' })
+    expect(mockDb.listCollections).toHaveBeenCalledWith({ name: 'reservations' })
     expect(mockDb.createCollection).not.toHaveBeenCalled()
     expect(mockDb.command).toHaveBeenCalledWith({ collMod: 'products', validator: expect.any(Object) })
     expect(mockDb.command).toHaveBeenCalledWith({ collMod: 'stockmovements', validator: expect.any(Object) })
+    expect(mockDb.command).toHaveBeenCalledWith({ collMod: 'reservations', validator: expect.any(Object) })
     expect(result).toBe(mockConnection)
   })
 

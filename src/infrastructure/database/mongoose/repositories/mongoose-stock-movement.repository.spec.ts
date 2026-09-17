@@ -41,14 +41,17 @@ describe(MongooseStockMovementRepository.name, () => {
 
     const result = await repository.create(movement)
 
-    expect(mockModel.create).toHaveBeenCalledWith(expect.objectContaining({
-      productId: 'prod-1',
-      type: 'INCREMENT',
-      quantity: 5,
-      previousStock: 0,
-      currentStock: 5,
-      reason: 'Initial stock',
-    }))
+    expect(mockModel.create).toHaveBeenCalledWith(
+      [expect.objectContaining({
+        productId: 'prod-1',
+        type: 'INCREMENT',
+        quantity: 5,
+        previousStock: 0,
+        currentStock: 5,
+        reason: 'Initial stock',
+      })],
+      undefined,
+    )
     expect(result.id).toBe('mov-1')
     expect(result.quantity).toBe(5)
   })
@@ -83,5 +86,24 @@ describe(MongooseStockMovementRepository.name, () => {
     expect(mockChain.limit).toHaveBeenCalledWith(5)
     expect(result).toHaveLength(1)
     expect(result[0].id).toBe('mov-1')
+  })
+
+  it('should list stock movements by productId with only pageSize', async () => {
+    const mockChain = {
+      sort: vi.fn().mockReturnThis(),
+      skip: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValueOnce([]),
+    }
+    mockModel.find.mockReturnValueOnce(mockChain)
+
+    const result = await repository.listByProductId({
+      productId: 'prod-1',
+      pageSize: 10,
+    })
+
+    expect(mockModel.find).toHaveBeenCalledWith({ productId: 'prod-1' })
+    expect(mockChain.limit).toHaveBeenCalledWith(10)
+    expect(mockChain.skip).not.toHaveBeenCalled()
+    expect(result).toEqual([])
   })
 })

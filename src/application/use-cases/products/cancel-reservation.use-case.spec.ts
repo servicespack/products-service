@@ -1,12 +1,15 @@
+import type { IReservationRepository } from '../../../domain/repositories/reservation.repository.interface'
 import type { IncreaseStockUseCase } from './increase-stock.use-case'
 import { faker } from '@faker-js/faker'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Product } from '../../../domain/entities/product.entity'
-import { InvalidStockQuantityError, ProductNotFoundError } from '../../../domain/errors'
+import { Reservation } from '../../../domain/entities/reservation.entity'
+import { ReservationAlreadyCancelledError, ReservationNotFoundError } from '../../../domain/errors'
 import { CancelReservationUseCase } from './cancel-reservation.use-case'
 
 describe(CancelReservationUseCase.name, () => {
   let increaseStockUseCase: IncreaseStockUseCase
+  let reservationRepository: IReservationRepository
   let cancelReservationUseCase: CancelReservationUseCase
 
   beforeEach(() => {
@@ -14,65 +17,121 @@ describe(CancelReservationUseCase.name, () => {
       execute: vi.fn(),
     } as unknown as IncreaseStockUseCase
 
-    cancelReservationUseCase = new CancelReservationUseCase(increaseStockUseCase)
+    reservationRepository = {
+      create: vi.fn(),
+      findById: vi.fn(),
+      update: vi.fn(async (r: Reservation) => r),
+    }
+
+    cancelReservationUseCase = new CancelReservationUseCase(increaseStockUseCase, reservationRepository)
   })
 
-  it('should cancel reservation with default quantity 1 and default reason', async () => {
+  it('should cancel active reservation and restore exact reserved stock', async () => {
+    const reservationId = faker.string.uuid()
     const productId = faker.string.uuid()
+
+    const reservation = new Reservation({
+      id: reservationId,
+      productId,
+      quantity: 3,
+      status: 'ACTIVE',
+      reason: 'Hold',
+    })
+
     const product = new Product({
       id: productId,
       name: 'Test Product',
       price: 100,
-      stock: 10,
+      stock: 13,
     })
 
+    vi.mocked(reservationRepository.findById).mockResolvedValueOnce(reservation)
     vi.mocked(increaseStockUseCase.execute).mockResolvedValueOnce(product)
 
-    const result = await cancelReservationUseCase.execute(productId)
+    const result = await cancelReservationUseCase.execute({
+      reservationId,
+      reason: 'Customer cancelled',
+    })
+
+    expect(reservationRepository.findById).toHaveBeenCalledWith(reservationId)
+    expect(reservationRepository.update).toHaveBeenCalledWith(expect.objectContaining({
+      id: reservationId,
+      status: 'CANCELLED',
+    }))
+    expect(increaseStockUseCase.execute).toHaveBeenCalledWith(productId, {
+      quantity: 3,
+      reason: 'Customer cancelled',
+    })
+    expect(result.product).toBe(product)
+    expect(result.reservation.status).toBe('CANCELLED')
+  })
+
+  it('should use default reason when reason is not provided', async () => {
+    const reservationId = faker.string.uuid()
+    const productId = faker.string.uuid()
+
+    const reservation = new Reservation({
+      id: reservationId,
+      productId,
+      quantity: 2,
+      status: 'ACTIVE',
+    })
+
+    const product = new Product({
+      id: productId,
+      name: 'Test Product',
+      price: 100,
+      stock: 5,
+    })
+
+    vi.mocked(reservationRepository.findById).mockResolvedValueOnce(reservation)
+    vi.mocked(increaseStockUseCase.execute).mockResolvedValueOnce(product)
+
+    const result = await cancelReservationUseCase.execute({ reservationId })
 
     expect(increaseStockUseCase.execute).toHaveBeenCalledWith(productId, {
-      quantity: 1,
+      quantity: 2,
       reason: 'Reservation Cancellation',
     })
-    expect(result).toBe(product)
+    expect(result.reservation.status).toBe('CANCELLED')
   })
 
-  it('should cancel reservation with custom quantity and reason', async () => {
-    const productId = faker.string.uuid()
-    const product = new Product({
-      id: productId,
-      name: 'Test Product',
-      price: 100,
-      stock: 15,
-    })
+  it('should throw ReservationNotFoundError if reservationId is empty', async () => {
+    await expect(cancelReservationUseCase.execute({ reservationId: '' }))
+      .rejects
+      .toThrow(ReservationNotFoundError)
 
-    vi.mocked(increaseStockUseCase.execute).mockResolvedValueOnce(product)
-
-    const result = await cancelReservationUseCase.execute(productId, {
-      quantity: 5,
-      reason: 'Order #123 Cancelled',
-    })
-
-    expect(increaseStockUseCase.execute).toHaveBeenCalledWith(productId, {
-      quantity: 5,
-      reason: 'Order #123 Cancelled',
-    })
-    expect(result).toBe(product)
+    expect(reservationRepository.findById).not.toHaveBeenCalled()
   })
 
-  it('should throw ProductNotFoundError if product does not exist', async () => {
-    const productId = faker.string.uuid()
+  it('should throw ReservationNotFoundError if reservation does not exist', async () => {
+    vi.mocked(reservationRepository.findById).mockResolvedValueOnce(null)
 
-    vi.mocked(increaseStockUseCase.execute).mockRejectedValueOnce(new ProductNotFoundError())
+    await expect(cancelReservationUseCase.execute({ reservationId: 'non-existent' }))
+      .rejects
+      .toThrow(ReservationNotFoundError)
 
-    await expect(cancelReservationUseCase.execute(productId)).rejects.toThrow(ProductNotFoundError)
+    expect(increaseStockUseCase.execute).not.toHaveBeenCalled()
   })
 
-  it('should throw InvalidStockQuantityError if quantity is invalid', async () => {
+  it('should throw ReservationAlreadyCancelledError and NOT increase stock on repeated cancellation', async () => {
+    const reservationId = faker.string.uuid()
     const productId = faker.string.uuid()
 
-    vi.mocked(increaseStockUseCase.execute).mockRejectedValueOnce(new InvalidStockQuantityError())
+    const reservation = new Reservation({
+      id: reservationId,
+      productId,
+      quantity: 3,
+      status: 'CANCELLED',
+    })
 
-    await expect(cancelReservationUseCase.execute(productId, { quantity: -1 })).rejects.toThrow(InvalidStockQuantityError)
+    vi.mocked(reservationRepository.findById).mockResolvedValueOnce(reservation)
+
+    await expect(cancelReservationUseCase.execute({ reservationId }))
+      .rejects
+      .toThrow(ReservationAlreadyCancelledError)
+
+    expect(reservationRepository.update).not.toHaveBeenCalled()
+    expect(increaseStockUseCase.execute).not.toHaveBeenCalled()
   })
 })

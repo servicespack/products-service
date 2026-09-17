@@ -1,12 +1,18 @@
 import type { Response } from 'express'
 import { ZodError } from 'zod'
-import { DomainError, InsufficientStockError, ProductNotFoundError } from '../../domain/errors'
+import {
+  DomainError,
+  InsufficientStockError,
+  ProductNotFoundError,
+  ReservationAlreadyCancelledError,
+  ReservationNotFoundError,
+} from '../../domain/errors'
 
 export function handleHttpError(error: unknown, response: Response): Response {
-  if (error instanceof ProductNotFoundError) {
+  if (error instanceof ProductNotFoundError || error instanceof ReservationNotFoundError) {
     return response.status(404).json({ error: error.message })
   }
-  if (error instanceof InsufficientStockError) {
+  if (error instanceof InsufficientStockError || error instanceof ReservationAlreadyCancelledError) {
     return response.status(409).json({ error: error.message })
   }
   if (error instanceof ZodError) {

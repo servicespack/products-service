@@ -14,6 +14,16 @@ export interface ListProductsParams {
   pageSize?: number
 }
 
+export interface CatalogSummary {
+  readonly totalProducts: number
+  readonly categories: Record<string, number>
+  readonly priceRange: {
+    readonly min: number
+    readonly max: number
+    readonly average: number
+  }
+}
+
 export interface IProductRepository {
   list: (params?: ListProductsParams) => Promise<Array<Product>>
   findById: (id: string, includeDeleted?: boolean) => Promise<Product | null>
@@ -23,4 +33,6 @@ export interface IProductRepository {
   restore: (id: string) => Promise<Product | null>
   decrementStock: (id: string, quantity: number) => Promise<Product | null>
   incrementStock: (id: string, quantity: number) => Promise<Product | null>
+  getCatalogSummary: () => Promise<CatalogSummary>
+  getLowStock: (threshold?: number) => Promise<Array<Product>>
 }

@@ -19,6 +19,8 @@ describe(UpdateProductUseCase.name, () => {
       list: vi.fn(),
       decrementStock: vi.fn(),
       incrementStock: vi.fn(),
+      getCatalogSummary: vi.fn(),
+      getLowStock: vi.fn(),
     }
     updateProductUseCase = new UpdateProductUseCase(productRepository)
   })

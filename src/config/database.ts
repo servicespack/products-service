@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 import { productValidationRules } from '../infrastructure/database/mongoose/models/product.model'
+import { reservationValidationRules } from '../infrastructure/database/mongoose/models/reservation.model'
 import { stockMovementValidationRules } from '../infrastructure/database/mongoose/models/stock-movement.model'
 import { configuration } from './configuration'
 import { logger } from './logger'
@@ -37,6 +38,17 @@ export async function connectDatabase(): Promise<typeof mongoose> {
   }
 
   logger.info('Schema validation applied to stockmovements collection')
+
+  const reservationCollections = await db.listCollections({ name: 'reservations' }).toArray()
+
+  if (reservationCollections.length > 0) {
+    await db.command({ collMod: 'reservations', validator: reservationValidationRules })
+  }
+  else {
+    await db.createCollection('reservations', { validator: reservationValidationRules })
+  }
+
+  logger.info('Schema validation applied to reservations collection')
 
   return connection
 }

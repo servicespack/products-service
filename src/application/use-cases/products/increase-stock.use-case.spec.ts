@@ -21,6 +21,8 @@ describe(IncreaseStockUseCase.name, () => {
       list: vi.fn(),
       decrementStock: vi.fn(),
       incrementStock: vi.fn(),
+      getCatalogSummary: vi.fn(),
+      getLowStock: vi.fn(),
     }
     stockMovementRepository = {
       create: vi.fn(),
@@ -115,5 +117,21 @@ describe(IncreaseStockUseCase.name, () => {
       .toThrow(ProductNotFoundError)
 
     expect(productRepository.incrementStock).not.toHaveBeenCalled()
+  })
+
+  it('should throw ProductNotFoundError when incrementStock returns null', async () => {
+    const existingProduct = new Product({
+      id: faker.string.uuid(),
+      name: 'Test Product',
+      price: 100,
+      stock: 5,
+    })
+
+    vi.mocked(productRepository.findById).mockResolvedValueOnce(existingProduct)
+    vi.mocked(productRepository.incrementStock).mockResolvedValueOnce(null)
+
+    await expect(increaseStockUseCase.execute(existingProduct.id!, { quantity: 5 }))
+      .rejects
+      .toThrow(ProductNotFoundError)
   })
 })

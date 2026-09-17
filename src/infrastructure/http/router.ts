@@ -7,6 +7,8 @@ import { CancelReservationUseCase } from '../../application/use-cases/products/c
 import { CreateProductUseCase } from '../../application/use-cases/products/create-product.use-case'
 import { DecreaseStockUseCase } from '../../application/use-cases/products/decrease-stock.use-case'
 import { DeleteProductUseCase } from '../../application/use-cases/products/delete-product.use-case'
+import { GetCatalogSummaryUseCase } from '../../application/use-cases/products/get-catalog-summary.use-case'
+import { GetLowStockProductsUseCase } from '../../application/use-cases/products/get-low-stock-products.use-case'
 import { GetProductByIdUseCase } from '../../application/use-cases/products/get-product-by-id.use-case'
 import { IncreaseStockUseCase } from '../../application/use-cases/products/increase-stock.use-case'
 import { ListProductsUseCase } from '../../application/use-cases/products/list-products.use-case'
@@ -15,8 +17,11 @@ import { ReserveProductUseCase } from '../../application/use-cases/products/rese
 import { RestoreProductUseCase } from '../../application/use-cases/products/restore-product.use-case'
 import { UpdateProductUseCase } from '../../application/use-cases/products/update-product.use-case'
 import { ProductModel } from '../database/mongoose/models/product.model'
+import { ReservationModel } from '../database/mongoose/models/reservation.model'
 import { StockMovementModel } from '../database/mongoose/models/stock-movement.model'
+import { MongooseTransactionManager } from '../database/mongoose/mongoose-transaction.manager'
 import { MongooseProductRepository } from '../database/mongoose/repositories/mongoose-product.repository'
+import { MongooseReservationRepository } from '../database/mongoose/repositories/mongoose-reservation.repository'
 import { MongooseStockMovementRepository } from '../database/mongoose/repositories/mongoose-stock-movement.repository'
 import { createMcpRouter, createProductsMcpServer } from '../mcp'
 
@@ -25,6 +30,8 @@ const router = express.Router()
 // Infrastructure Adapters
 const productRepository = new MongooseProductRepository(ProductModel)
 const stockMovementRepository = new MongooseStockMovementRepository(StockMovementModel)
+const reservationRepository = new MongooseReservationRepository(ReservationModel)
+const transactionManager = new MongooseTransactionManager()
 
 // Application Use Cases
 const createProductUseCase = new CreateProductUseCase(productRepository)
@@ -33,12 +40,13 @@ const getProductByIdUseCase = new GetProductByIdUseCase(productRepository)
 const updateProductUseCase = new UpdateProductUseCase(productRepository)
 const deleteProductUseCase = new DeleteProductUseCase(productRepository)
 const restoreProductUseCase = new RestoreProductUseCase(productRepository)
-const decreaseStockUseCase = new DecreaseStockUseCase(productRepository, stockMovementRepository)
-const increaseStockUseCase = new IncreaseStockUseCase(productRepository, stockMovementRepository)
+const decreaseStockUseCase = new DecreaseStockUseCase(productRepository, stockMovementRepository, transactionManager)
+const increaseStockUseCase = new IncreaseStockUseCase(productRepository, stockMovementRepository, transactionManager)
 const listStockMovementsUseCase = new ListStockMovementsUseCase(productRepository, stockMovementRepository)
-const reserveProductUseCase = new ReserveProductUseCase(decreaseStockUseCase)
-
-const cancelReservationUseCase = new CancelReservationUseCase(increaseStockUseCase)
+const reserveProductUseCase = new ReserveProductUseCase(decreaseStockUseCase, reservationRepository, transactionManager)
+const cancelReservationUseCase = new CancelReservationUseCase(increaseStockUseCase, reservationRepository, transactionManager)
+const getCatalogSummaryUseCase = new GetCatalogSummaryUseCase(productRepository)
+const getLowStockProductsUseCase = new GetLowStockProductsUseCase(productRepository)
 
 // Controllers
 const productsController = new ProductsController({
@@ -59,6 +67,8 @@ const productsMcpController = new ProductsMcpController({
   reserveProductUseCase,
   cancelReservationUseCase,
   listStockMovementsUseCase,
+  getCatalogSummaryUseCase,
+  getLowStockProductsUseCase,
 })
 
 // MCP Infrastructure

@@ -18,6 +18,8 @@ describe(ListProductsUseCase.name, () => {
       list: vi.fn().mockResolvedValue([]),
       decrementStock: vi.fn(),
       incrementStock: vi.fn(),
+      getCatalogSummary: vi.fn(),
+      getLowStock: vi.fn(),
     }
     listProductsUseCase = new ListProductsUseCase(productRepository)
   })

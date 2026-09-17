@@ -47,10 +47,9 @@ export function createProductsMcpServer(controller: ProductsMcpController): McpS
   })
 
   server.registerTool('cancel_reservation', {
-    description: 'Cancel a reservation, returning the quantity to available stock.',
+    description: 'Cancel a reservation using its reservation ID, returning the reserved quantity to available stock.',
     inputSchema: {
-      productId: z.string().min(1).describe('Unique identifier (ID) of the product'),
-      quantity: z.number().int().positive().optional().describe('Quantity of product to return to stock (default: 1)'),
+      reservationId: z.string().min(1).describe('Unique identifier (ID) of the reservation to cancel'),
       reason: z.string().optional().describe('Reason for cancellation'),
     },
   }, async (args) => {

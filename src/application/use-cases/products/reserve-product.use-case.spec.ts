@@ -1,3 +1,5 @@
+import type { Reservation } from '../../../domain/entities/reservation.entity'
+import type { IReservationRepository } from '../../../domain/repositories/reservation.repository.interface'
 import type { DecreaseStockUseCase } from './decrease-stock.use-case'
 import { faker } from '@faker-js/faker'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -7,6 +9,7 @@ import { ReserveProductUseCase } from './reserve-product.use-case'
 
 describe(ReserveProductUseCase.name, () => {
   let decreaseStockUseCase: DecreaseStockUseCase
+  let reservationRepository: IReservationRepository
   let reserveProductUseCase: ReserveProductUseCase
 
   beforeEach(() => {
@@ -14,7 +17,13 @@ describe(ReserveProductUseCase.name, () => {
       execute: vi.fn(),
     } as unknown as DecreaseStockUseCase
 
-    reserveProductUseCase = new ReserveProductUseCase(decreaseStockUseCase)
+    reservationRepository = {
+      create: vi.fn(async (r: Reservation) => r),
+      findById: vi.fn(),
+      update: vi.fn(),
+    }
+
+    reserveProductUseCase = new ReserveProductUseCase(decreaseStockUseCase, reservationRepository)
   })
 
   it('should reserve product with default quantity 1 and default reason Reservation', async () => {
@@ -34,7 +43,15 @@ describe(ReserveProductUseCase.name, () => {
       quantity: 1,
       reason: 'Reservation',
     })
-    expect(result).toBe(product)
+    expect(reservationRepository.create).toHaveBeenCalledWith(expect.objectContaining({
+      productId,
+      quantity: 1,
+      status: 'ACTIVE',
+      reason: 'Reservation',
+    }))
+    expect(result.product).toBe(product)
+    expect(result.reservation.productId).toBe(productId)
+    expect(result.reservation.quantity).toBe(1)
   })
 
   it('should reserve product with custom quantity and reason', async () => {
@@ -57,7 +74,14 @@ describe(ReserveProductUseCase.name, () => {
       quantity: 5,
       reason: 'Order #1234',
     })
-    expect(result).toBe(product)
+    expect(reservationRepository.create).toHaveBeenCalledWith(expect.objectContaining({
+      productId,
+      quantity: 5,
+      status: 'ACTIVE',
+      reason: 'Order #1234',
+    }))
+    expect(result.product).toBe(product)
+    expect(result.reservation.quantity).toBe(5)
   })
 
   it('should throw ProductNotFoundError if product does not exist', async () => {

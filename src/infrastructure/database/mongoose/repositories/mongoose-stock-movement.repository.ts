@@ -6,12 +6,18 @@ import type {
 } from '../../../../domain/repositories/stock-movement.repository.interface'
 import type { IStockMovementDoc } from '../models/stock-movement.model'
 import { StockMovementMapper } from '../mappers/stock-movement.mapper'
+import { transactionStorage } from '../transaction.context'
 
 export class MongooseStockMovementRepository implements IStockMovementRepository {
   constructor(private readonly model: Model<IStockMovementDoc>) {}
 
   async create(movement: StockMovement): Promise<StockMovement> {
-    const created = await this.model.create(StockMovementMapper.toPersistence(movement))
+    const session = transactionStorage.getStore()
+    const result = await this.model.create(
+      [StockMovementMapper.toPersistence(movement)],
+      session ? { session } : undefined,
+    )
+    const created = Array.isArray(result) ? result[0] : result
     return StockMovementMapper.toDomain(created)
   }
 

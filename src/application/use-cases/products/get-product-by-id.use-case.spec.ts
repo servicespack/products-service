@@ -19,6 +19,8 @@ describe(GetProductByIdUseCase.name, () => {
       list: vi.fn(),
       decrementStock: vi.fn(),
       incrementStock: vi.fn(),
+      getCatalogSummary: vi.fn(),
+      getLowStock: vi.fn(),
     }
     getProductByIdUseCase = new GetProductByIdUseCase(productRepository)
   })

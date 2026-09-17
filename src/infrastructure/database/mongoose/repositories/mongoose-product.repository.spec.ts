@@ -18,6 +18,7 @@ describe(MongooseProductRepository.name, () => {
       findByIdAndUpdate: vi.fn(),
       findByIdAndDelete: vi.fn(),
       findOneAndUpdate: vi.fn(),
+      aggregate: vi.fn(),
     }
     repository = new MongooseProductRepository(mockModel as Model<IProductDoc>)
   })
@@ -351,6 +352,85 @@ describe(MongooseProductRepository.name, () => {
       expect(mockQuery.skip).toHaveBeenCalledWith(5)
       expect(mockQuery.limit).toHaveBeenCalledWith(5)
     })
+
+    it('should query only deleted products when onlyDeleted is true', async () => {
+      const mockQuery = {
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        then: vi.fn((resolve: any) => resolve([])),
+      }
+      vi.mocked(mockModel.find as any).mockReturnValueOnce(mockQuery)
+
+      await repository.list({ onlyDeleted: true })
+
+      expect(mockModel.find).toHaveBeenCalledWith({
+        deletedAt: { $ne: null },
+      })
+    })
+
+    it('should not filter by deletedAt when includeDeleted is true', async () => {
+      const mockQuery = {
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        then: vi.fn((resolve: any) => resolve([])),
+      }
+      vi.mocked(mockModel.find as any).mockReturnValueOnce(mockQuery)
+
+      await repository.list({ includeDeleted: true })
+
+      expect(mockModel.find).toHaveBeenCalledWith({})
+    })
+
+    it('should filter by minPrice only', async () => {
+      const mockQuery = {
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        then: vi.fn((resolve: any) => resolve([])),
+      }
+      vi.mocked(mockModel.find as any).mockReturnValueOnce(mockQuery)
+
+      await repository.list({ minPrice: 20 })
+
+      expect(mockModel.find).toHaveBeenCalledWith({
+        deletedAt: null,
+        price: { $gte: 20 },
+      })
+    })
+
+    it('should filter by maxPrice only', async () => {
+      const mockQuery = {
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        then: vi.fn((resolve: any) => resolve([])),
+      }
+      vi.mocked(mockModel.find as any).mockReturnValueOnce(mockQuery)
+
+      await repository.list({ maxPrice: 100 })
+
+      expect(mockModel.find).toHaveBeenCalledWith({
+        deletedAt: null,
+        price: { $lte: 100 },
+      })
+    })
+
+    it('should apply limit without skip when only pageSize is provided', async () => {
+      const mockQuery = {
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        then: vi.fn((resolve: any) => resolve([])),
+      }
+      vi.mocked(mockModel.find as any).mockReturnValueOnce(mockQuery)
+
+      await repository.list({ pageSize: 15 })
+
+      expect(mockQuery.limit).toHaveBeenCalledWith(15)
+      expect(mockQuery.skip).not.toHaveBeenCalled()
+    })
   })
 
   describe('decrementStock', () => {
@@ -440,6 +520,80 @@ describe(MongooseProductRepository.name, () => {
       )
       expect(result).toBeInstanceOf(Product)
       expect(result?.stock).toBe(15)
+    })
+  })
+
+  describe('getCatalogSummary', () => {
+    it('should aggregate catalog summary', async () => {
+      const mockResult = [{
+        priceStats: [{
+          totalProducts: 5,
+          minPrice: 10,
+          maxPrice: 100,
+          avgPrice: 50,
+        }],
+        categories: [
+          { _id: 'Electronics', count: 3 },
+          { _id: 'Books', count: 2 },
+          { _id: null, count: 1 },
+        ],
+      }]
+      vi.mocked(mockModel.aggregate as any).mockResolvedValueOnce(mockResult as any)
+
+      const result = await repository.getCatalogSummary()
+
+      expect(mockModel.aggregate).toHaveBeenCalledWith([
+        { $match: { deletedAt: null, active: true } },
+        expect.objectContaining({ $facet: expect.any(Object) }),
+      ])
+      expect(result).toEqual({
+        totalProducts: 5,
+        categories: { Electronics: 3, Books: 2 },
+        priceRange: {
+          min: 10,
+          max: 100,
+          average: 50,
+        },
+      })
+    })
+
+    it('should handle empty result gracefully', async () => {
+      vi.mocked(mockModel.aggregate as any).mockResolvedValueOnce([] as any)
+
+      const result = await repository.getCatalogSummary()
+
+      expect(result).toEqual({
+        totalProducts: 0,
+        categories: {},
+        priceRange: {
+          min: 0,
+          max: 0,
+          average: 0,
+        },
+      })
+    })
+  })
+
+  describe('getLowStock', () => {
+    it('should find active products with stock <= threshold', async () => {
+      const mockDoc = {
+        _id: new mongoose.Types.ObjectId(),
+        name: 'Item',
+        price: 10,
+        stock: 3,
+        active: true,
+      }
+      vi.mocked(mockModel.find as any).mockResolvedValueOnce([mockDoc] as any)
+
+      const result = await repository.getLowStock(5)
+
+      expect(mockModel.find).toHaveBeenCalledWith({
+        deletedAt: null,
+        active: true,
+        stock: { $lte: 5 },
+      })
+      expect(result).toHaveLength(1)
+      expect(result[0].stock).toBe(3)
     })
   })
 })
