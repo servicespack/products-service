@@ -26,6 +26,7 @@ Whenever a new environment variable is introduced in the code (e.g., in `src/con
 - **Run all tests**: `npm test` (Vitest run)
 - **Run single test file**: `npx vitest run <path/to/file.spec.ts>`
 - **Test coverage**: `npm run test:cov`
+- **Mutation tests**: `npm run test:mutation` (`stryker run`)
 - **Standard verification pipeline**: `npm run build:check && npm run lint && npm run build && npm test`
 
 ## Architecture & Layers
@@ -164,6 +165,7 @@ The codebase follows the Clean Architecture standards established across Service
 │   │       ├── mcp.server.spec.ts
 │   │       └── mcp.server.ts
 │   └── index.ts
+├── stryker.config.json
 └── tests/
     ├── configuration.spec.ts
     ├── e2e/
@@ -181,5 +183,6 @@ The codebase follows the Clean Architecture standards established across Service
 
 - **ODM & Database**: Uses `mongoose` with MongoDB. Database connection and schema validator synchronization are managed in `src/config/database.ts`.
 - **In-Memory Testing**: Tests run against `mongodb-memory-server` configured in `tests/setup.ts` via `vite.config.mts`.
+- **Mutation Testing**: Uses Stryker Mutator (`stryker.config.json`) with `@stryker-mutator/vitest-runner`.
 - **ESLint**: Uses `@antfu/eslint-config` (ESLint 9 flat config). Runs on the entire project (`eslint .`).
 - **Build Artifacts**: `tsdown` generates `dist/index.js` as specified in `tsdown.config.mts` (matching `package.json` `"main": "dist/index.js"` and `Dockerfile` `CMD ["node", "dist/index.js"]`).

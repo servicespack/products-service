@@ -3,110 +3,110 @@
 [![CI](https://github.com/servicespack/products-service/actions/workflows/ci.yml/badge.svg)](https://github.com/servicespack/products-service/actions/workflows/ci.yml)
 [![CD](https://github.com/servicespack/products-service/actions/workflows/cd.yml/badge.svg)](https://github.com/servicespack/products-service/actions/workflows/cd.yml)
 
-Microsserviço de gerenciamento de produtos e controle de estoque do ecossistema `@servicespack`, estruturado sob os princípios da **Clean Architecture** (Robert C. Martin) em TypeScript com Node.js, Express e MongoDB (Mongoose).
+Product management and stock control microservice for the `@servicespack` ecosystem, structured under the principles of **Clean Architecture** (Robert C. Martin) in TypeScript with Node.js, Express, and MongoDB (Mongoose).
 
 ---
 
-## ✨ Funcionalidades
+## ✨ Features
 
-### 📦 Gestão de Catálogo de Produtos
-* **Cadastro com Validação Estrita**: Criação de produtos via Zod validando nome, descrição, preço, SKU único, estoque inicial, categorias, tags e status ativo.
-* **Busca e Filtragem Avançada**: Listagem com paginação (`page`, `pageSize`) e suporte a múltiplos filtros simultâneos:
-  * Busca textual em nome e descrição.
-  * Filtros exatos por SKU, categoria e tag.
-  * Filtro por faixa de preço (`minPrice` e `maxPrice`).
-  * Filtro por status (`active=true/false`).
-  * Consulta a itens excluídos (`includeDeleted=true` ou `onlyDeleted=true`).
-* **Consulta Detalhada**: Busca por ID com suporte a produtos arquivados.
-* **Atualização Parcial e Completa**: Atualização via `PUT` ou `PATCH` preservando integridade e trilha de estoque.
-* **Soft Delete e Restauração**: Exclusão lógica (`deletedAt`) e endpoint dedicado para restauração de produtos removidos.
+### 📦 Product Catalog Management
+* **Strict Validation Registration**: Product creation via Zod validating name, description, price, unique SKU, initial stock, categories, tags, and active status.
+* **Advanced Search and Filtering**: Listing with pagination (`page`, `pageSize`) and support for multiple simultaneous filters:
+  * Textual search in name and description.
+  * Exact filters by SKU, category, and tag.
+  * Price range filter (`minPrice` and `maxPrice`).
+  * Status filter (`active=true/false`).
+  * Query deleted items (`includeDeleted=true` or `onlyDeleted=true`).
+* **Detailed Query**: Retrieve by ID with support for archived products.
+* **Partial and Full Update**: Updates via `PUT` or `PATCH` preserving integrity and stock audit trail.
+* **Soft Delete and Restoration**: Logical deletion (`deletedAt`) and a dedicated endpoint for restoring removed products.
 
-### 📊 Controle e Movimentação de Estoque
-* **Incremento de Estoque**: Adição atômica de saldo com registro obrigatório de motivo para auditoria.
-* **Decremento de Estoque**: Redução atômica com trava contra saldo insuficiente (retorna `409 Conflict`).
-* **Reserva e Liberação**: Casos de uso dedicados para reserva de estoque em pedidos e cancelamento de reservas.
-* **Histórico e Trilha de Auditoria**: Registro imutável de movimentações (`INCREMENT` e `DECREASE`) contendo saldo anterior, saldo atual, quantidade movimentada, motivo e timestamp.
+### 📊 Stock Control and Movements
+* **Stock Increment**: Atomic balance addition with mandatory reason recording for auditing.
+* **Stock Decrement**: Atomic reduction with safeguard against insufficient stock (returns `409 Conflict`).
+* **Reservation and Release**: Dedicated use cases for order stock reservation and reservation cancellation.
+* **Audit Trail and History**: Immutable movement log (`INCREMENT` and `DECREASE`) containing previous stock, current stock, moved quantity, reason, and timestamp.
 
-### 🤖 Integração com Model Context Protocol (MCP)
-Servidor MCP integrado para comunicação com agentes de IA via Server-Sent Events (SSE):
-* **Ferramentas (Tools)**:
-  * `search_products`: Busca e filtragem flexível no catálogo.
-  * `get_product_details`: Consulta detalhada de produto por ID ou SKU.
-  * `reserve_product`: Reserva de produtos com baixa atômica em estoque.
-  * `cancel_reservation`: Cancelamento de reserva com devolução dos itens ao estoque.
-  * `get_stock_history`: Consulta ao histórico de movimentações de um item.
-* **Recursos (Resources)**:
-  * `products://catalog/summary`: Resumo consolidado do catálogo (total de produtos, distribuição por categoria e preços mín/máx/médio).
-  * `products://stock/low-stock`: Monitoramento em tempo real de produtos com estoque baixo (<= 5).
-  * `products://{id}`: Leitura direta dos dados de um produto por URI.
+### 🤖 Model Context Protocol (MCP) Integration
+Integrated MCP server for communication with AI agents via Server-Sent Events (SSE):
+* **Tools**:
+  * `search_products`: Flexible search and filtering across the catalog.
+  * `get_product_details`: Detailed product query by ID or SKU.
+  * `reserve_product`: Product reservation with atomic stock decrement.
+  * `cancel_reservation`: Reservation cancellation with item return to stock.
+  * `get_stock_history`: Retrieve movement history of an item.
+* **Resources**:
+  * `products://catalog/summary`: Consolidated catalog summary (total products, distribution by category, and min/max/average prices).
+  * `products://stock/low-stock`: Real-time monitoring of products with low stock (<= 5).
+  * `products://{id}`: Direct reading of product data via URI.
 * **Prompts**:
-  * `recommend_products`: Template guiado para recomendações personalizadas com base em preferências, categoria e orçamento.
+  * `recommend_products`: Guided template for personalized recommendations based on preferences, category, and budget.
 
-### 🔒 Segurança e Autenticação
-* **Autenticação via JWT**: Proteção das rotas HTTP e streams SSE validando tokens via header `Authorization: Bearer <token>` ou query param `token`.
+### 🔒 Security and Authentication
+* **JWT Authentication**: Protection of HTTP routes and SSE streams validating tokens via the `Authorization: Bearer <token>` header or `token` query param.
 
 ---
 
-## 🏛️ Arquitetura
+## 🏛️ Architecture
 
-O projeto é organizado em camadas desacopladas seguindo o padrão de dependência unidirecional:
+The project is organized into decoupled layers following the unidirectional dependency rule:
 
 ```
 src/
-├── domain/                      # 1. Regras de Negócio Corporativas (Enterprise Business Rules)
-│   ├── entities/                # Entidades puras (Product, StockMovement) com invariantes
-│   ├── errors/                  # Erros semânticos de domínio
-│   └── repositories/            # Contratos/Portas de repositórios (IProductRepository, IStockMovementRepository)
-├── application/                 # 2. Regras de Negócio da Aplicação (Application Business Rules)
-│   ├── dtos/                    # Modelos de entrada/saída de casos de uso
-│   └── use-cases/products/      # Casos de uso isolados (Create, List, GetById, Update, Delete, Restore, Stock)
-├── adapters/                    # 3. Adaptadores de Interface
-│   ├── controllers/             # Express controllers desacoplados
-│   ├── dtos/                    # Schemas de validação de requisição (Zod)
-│   └── helpers/                 # Tradutor de erros de domínio para respostas HTTP
-└── infrastructure/              # 4. Frameworks & Drivers (Camada externa)
-    ├── database/mongoose/       # Modelos, schemas e repositórios Mongoose
-    └── http/                    # Rotas, configuração do Express e tratamento global de erros
+├── domain/                      # 1. Enterprise Business Rules
+│   ├── entities/                # Pure entities (Product, StockMovement) with invariants
+│   ├── errors/                  # Domain semantic errors
+│   └── repositories/            # Repository contracts/ports (IProductRepository, IStockMovementRepository)
+├── application/                 # 2. Application Business Rules
+│   ├── dtos/                    # Use case input/output models
+│   └── use-cases/products/      # Isolated use cases (Create, List, GetById, Update, Delete, Restore, Stock)
+├── adapters/                    # 3. Interface Adapters
+│   ├── controllers/             # Decoupled Express controllers
+│   ├── dtos/                    # Request validation schemas (Zod)
+│   └── helpers/                 # Translator of domain errors to HTTP responses
+└── infrastructure/              # 4. Frameworks & Drivers (External layer)
+    ├── database/mongoose/       # Mongoose models, schemas, and repositories
+    └── http/                    # Routes, Express configuration, and global error handling
 ```
 
 ---
 
-## 🚀 Como Executar
+## 🚀 How to Run
 
-### Pré-requisitos
+### Prerequisites
 * Node.js >= 22.0.0
 * npm >= 10.0.0
-* Docker e Docker Compose (para execução do MongoDB)
+* Docker and Docker Compose (to run MongoDB)
 
-### Instalação
+### Installation
 ```bash
 npm install
 ```
 
-### Configuração de Ambiente
-Copie o arquivo de exemplo de variáveis de ambiente:
+### Environment Configuration
+Copy the example environment variables file:
 ```bash
 cp .env.example .env
 ```
 
-| Variável | Descrição | Padrão |
+| Variable | Description | Default |
 |---|---|---|
-| `DATABASE_URI` | URI de conexão com o MongoDB | `mongodb://localhost:27017/products-service` |
-| `SERVER_PORT` / `HTTP_SERVER_PORT` | Porta do servidor HTTP | `3000` |
-| `JWT_SECRET` | Chave secreta para assinatura e validação de tokens JWT | `secret` |
-| `NODE_ENV` | Ambiente de execução (`development`, `production`, `test`) | `development` |
+| `DATABASE_URI` | MongoDB connection URI | `mongodb://localhost:27017/products-service` |
+| `SERVER_PORT` / `HTTP_SERVER_PORT` | HTTP server port | `3000` |
+| `JWT_SECRET` | Secret key for signing and validating JWT tokens | `secret` |
+| `NODE_ENV` | Runtime environment (`development`, `production`, `test`) | `development` |
 
-### Executando com Docker Compose (Banco de Dados)
+### Running with Docker Compose (Database)
 ```bash
 docker compose up -d
 ```
 
-### Desenvolvimento
+### Development
 ```bash
 npm run start:dev
 ```
 
-### Build e Produção
+### Build and Production
 ```bash
 npm run build
 npm start
@@ -114,64 +114,65 @@ npm start
 
 ---
 
-## 🧪 Testes e Qualidade de Código
+## 🧪 Testing and Code Quality
 
-* **Executar todos os testes:** `npm test`
-* **Testes com cobertura:** `npm run test:cov`
-* **Checagem de tipos (TypeScript):** `npm run build:check`
+* **Run all tests:** `npm test`
+* **Test coverage:** `npm run test:cov`
+* **Mutation tests:** `npm run test:mutation`
+* **Type check (TypeScript):** `npm run build:check`
 * **Linter (ESLint):** `npm run lint`
-* **Correção automática do linter:** `npm run lint:fix`
-* **Pipeline de validação completa:** `npm run build:check && npm run lint && npm run build && npm test`
+* **Linter auto-fix:** `npm run lint:fix`
+* **Full validation pipeline:** `npm run build:check && npm run lint && npm run build && npm test`
 
 ---
 
-## 📡 Referência da API (Endpoints)
+## 📡 API Reference (Endpoints)
 
-> **Autenticação**: Todas as requisições exigem token JWT válido, fornecido via header `Authorization: Bearer <token>` ou parâmetro de consulta `?token=<token>`.
+> **Authentication**: All requests require a valid JWT token, provided via the `Authorization: Bearer <token>` header or `?token=<token>` query parameter.
 
-### 1. Criar Produto
+### 1. Create Product
 * **POST** `/products`
 * **Body:**
   ```json
   {
-    "name": "Notebook Dell Inspiron",
+    "name": "Dell Inspiron Laptop",
     "description": "Intel Core i7, 16GB RAM, 512GB SSD",
     "price": 4500.00,
     "sku": "DELL-INSP-01",
     "stock": 10,
-    "category": "Eletrônicos",
-    "tags": ["notebook", "dell", "computadores"],
+    "category": "Electronics",
+    "tags": ["laptop", "dell", "computers"],
     "active": true
   }
   ```
-* **Retorno:** `201 Created`
+* **Response:** `201 Created`
 
-### 2. Listar Produtos
+### 2. List Products
 * **GET** `/products`
-* **Query Params (opcionais):**
-  * `search`: Busca por texto no nome ou descrição
-  * `sku`: Filtro exato por SKU
-  * `category`: Filtro por categoria
-  * `tag`: Filtro por tag
-  * `minPrice` / `maxPrice`: Filtro por faixa de preço
-  * `active`: `true` ou `false`
-  * `includeDeleted`: `true` (inclui produtos com soft delete)
-  * `onlyDeleted`: `true` (retorna apenas produtos excluídos)
-  * `page`: Número da página (padrão `1`)
-  * `pageSize` ou `size`: Quantidade por página (padrão `20`)
-* **Retorno:** `200 OK`
+* **Query Params (optional):**
+  * `search`: Text search in name or description
+  * `sku`: Exact SKU filter
+  * `category`: Category filter
+  * `tag`: Tag filter
+  * `minPrice` / `maxPrice`: Price range filter
+  * `active`: `true` or `false`
+  * `includeDeleted`: `true` (includes soft-deleted products)
+  * `onlyDeleted`: `true` (returns only deleted products)
+  * `page`: Page number (default `1`)
+  * `pageSize` or `size`: Items per page (default `20`)
+* **Response:** `200 OK`
   ```json
   {
     "data": [
       {
         "id": "60d0fe4f5311236168a109ca",
-        "name": "Notebook Dell Inspiron",
+        "name": "Dell Inspiron Laptop",
         "description": "Intel Core i7, 16GB RAM, 512GB SSD",
         "price": 4500,
         "sku": "DELL-INSP-01",
         "stock": 10,
-        "category": "Eletrônicos",
-        "tags": ["notebook", "dell", "computadores"],
+        "category": "Electronics",
+        "tags": ["laptop", "dell", "computers"],
         "active": true,
         "createdAt": "2026-09-09T16:00:00.000Z",
         "updatedAt": "2026-09-09T16:00:00.000Z"
@@ -180,58 +181,58 @@ npm start
   }
   ```
 
-### 3. Obter Produto por ID
+### 3. Get Product by ID
 * **GET** `/products/:id`
-* **Query Params (opcionais):** `includeDeleted=true`
-* **Retorno:** `200 OK`
+* **Query Params (optional):** `includeDeleted=true`
+* **Response:** `200 OK`
 
-### 4. Atualizar Produto
-* **PUT** ou **PATCH** `/products/:id`
-* **Body (campos opcionais):**
+### 4. Update Product
+* **PUT** or **PATCH** `/products/:id`
+* **Body (optional fields):**
   ```json
   {
-    "name": "Notebook Dell Inspiron Plus",
+    "name": "Dell Inspiron Plus Laptop",
     "price": 4800.00,
     "active": true
   }
   ```
-* **Retorno:** `200 OK`
+* **Response:** `200 OK`
 
-### 5. Remover Produto (Soft Delete)
+### 5. Remove Product (Soft Delete)
 * **DELETE** `/products/:id`
-* **Retorno:** `204 No Content`
+* **Response:** `204 No Content`
 
-### 6. Restaurar Produto Removido
+### 6. Restore Removed Product
 * **POST** `/products/:id/restore`
-* **Retorno:** `200 OK`
+* **Response:** `200 OK`
 
-### 7. Incrementar Estoque
-* **POST** `/products/:id/increase-stock` (ou `/products/:id/stock/increase`)
+### 7. Increase Stock
+* **POST** `/products/:id/increase-stock` (or `/products/:id/stock/increase`)
 * **Body:**
   ```json
   {
     "quantity": 5,
-    "reason": "Reposição de estoque"
+    "reason": "Restock"
   }
   ```
-* **Retorno:** `200 OK` (retorna o produto com estoque atualizado)
+* **Response:** `200 OK` (returns the product with updated stock)
 
-### 8. Decrementar Estoque
-* **POST** `/products/:id/decrease-stock` (ou `/products/:id/stock/decrease`)
+### 8. Decrease Stock
+* **POST** `/products/:id/decrease-stock` (or `/products/:id/stock/decrease`)
 * **Body:**
   ```json
   {
     "quantity": 2,
-    "reason": "Venda realizada"
+    "reason": "Sale completed"
   }
   ```
-* **Retorno:** `200 OK` (retorna o produto com estoque atualizado)
-* **Erros:** Retorna `409 Conflict` se a quantidade solicitada for superior ao saldo disponível em estoque.
+* **Response:** `200 OK` (returns the product with updated stock)
+* **Errors:** Returns `409 Conflict` if the requested quantity exceeds the available stock balance.
 
-### 9. Listar Histórico de Movimentações de Estoque
-* **GET** `/products/:id/stock-movements` (ou `/products/:id/movements`)
-* **Query Params (opcionais):** `page`, `pageSize`
-* **Retorno:** `200 OK`
+### 9. List Stock Movement History
+* **GET** `/products/:id/stock-movements` (or `/products/:id/movements`)
+* **Query Params (optional):** `page`, `pageSize`
+* **Response:** `200 OK`
   ```json
   {
     "data": [
@@ -242,17 +243,17 @@ npm start
         "quantity": 2,
         "previousStock": 10,
         "newStock": 8,
-        "reason": "Venda realizada",
+        "reason": "Sale completed",
         "createdAt": "2026-09-09T16:10:00.000Z"
       }
     ]
   }
   ```
 
-### 10. Endpoints MCP (Model Context Protocol)
-* **GET** `/sse` (ou `/mcp/sse`)
-  * Inicia a conexão SSE com o servidor MCP. Retorna o endpoint para envio de mensagens com `sessionId`.
-  * **Headers:** `Accept: text/event-stream`, `Authorization: Bearer <token>` (ou `?token=<token>`).
-* **POST** `/messages?sessionId=<sessionId>` (ou `/mcp/messages?sessionId=<sessionId>`)
-  * Envia mensagens JSON-RPC 2.0 para execução de ferramentas, leitura de recursos ou obtenção de prompts.
+### 10. MCP (Model Context Protocol) Endpoints
+* **GET** `/sse` (or `/mcp/sse`)
+  * Starts the SSE connection with the MCP server. Returns the endpoint for sending messages with `sessionId`.
+  * **Headers:** `Accept: text/event-stream`, `Authorization: Bearer <token>` (or `?token=<token>`).
+* **POST** `/messages?sessionId=<sessionId>` (or `/mcp/messages?sessionId=<sessionId>`)
+  * Sends JSON-RPC 2.0 messages for tool execution, resource reading, or prompt retrieval.
   * **Headers:** `Content-Type: application/json`, `Authorization: Bearer <token>`.
