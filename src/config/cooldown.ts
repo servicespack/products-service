@@ -7,8 +7,24 @@ function cooldown({ server }: {
   server: http.Server
 }): void {
   const close = (code: number) => () => {
+    logger.info('Graceful shutdown initiated')
+
+    const timer = setTimeout(() => {
+      logger.error('Graceful shutdown timed out, force exiting')
+      process.exit(code)
+    }, 10000)
+
     server.close(() => {
-      mongoose.disconnect().then(() => process.exit(code)).catch(error => logger.error(error))
+      mongoose.disconnect()
+        .then(() => {
+          clearTimeout(timer)
+          process.exit(code)
+        })
+        .catch((error) => {
+          clearTimeout(timer)
+          logger.error(error)
+          process.exit(code)
+        })
     })
   }
 

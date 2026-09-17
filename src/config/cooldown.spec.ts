@@ -12,6 +12,7 @@ vi.mock('mongoose', () => ({
 
 vi.mock('./logger', () => ({
   logger: {
+    info: vi.fn(),
     error: vi.fn(),
   },
 }))
@@ -77,6 +78,6 @@ describe('cooldown', () => {
 
     expect(mongoose.disconnect).toHaveBeenCalled()
     expect(logger.error).toHaveBeenCalledWith(error)
-    expect(processExitSpy).not.toHaveBeenCalled()
+    expect(processExitSpy).toHaveBeenCalledWith(128 + 15)
   })
 })
