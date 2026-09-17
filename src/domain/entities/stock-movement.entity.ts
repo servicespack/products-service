@@ -36,6 +36,14 @@ export class StockMovement {
       throw new InvalidStockQuantityError('Current stock must be a non-negative integer')
     }
 
+    const expectedCurrentStock = props.type === 'INCREMENT'
+      ? props.previousStock + props.quantity
+      : props.previousStock - props.quantity
+
+    if (props.currentStock !== expectedCurrentStock) {
+      throw new InvalidStockQuantityError('Current stock does not match the expected calculation')
+    }
+
     this._id = props.id
     this._productId = props.productId
     this._type = props.type

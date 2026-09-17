@@ -70,6 +70,24 @@ describe('stockMovement Entity', () => {
     })).toThrow(InvalidStockQuantityError)
   })
 
+  it('should throw error when currentStock does not match calculation', () => {
+    expect(() => new StockMovement({
+      productId: 'prod-1',
+      type: 'INCREMENT',
+      quantity: 5,
+      previousStock: 10,
+      currentStock: 10,
+    })).toThrow(InvalidStockQuantityError)
+
+    expect(() => new StockMovement({
+      productId: 'prod-1',
+      type: 'DECREMENT',
+      quantity: 5,
+      previousStock: 10,
+      currentStock: 10,
+    })).toThrow(InvalidStockQuantityError)
+  })
+
   it('should serialize to JSON correctly', () => {
     const createdAt = new Date('2026-01-01')
     const movement = new StockMovement({
