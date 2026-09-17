@@ -13,6 +13,8 @@ const configurationSchema = z.object({
   }),
   auth: z.object({
     jwtSecret: z.string().min(1, 'JWT_SECRET is required'),
+    jwtIssuer: z.string().default('servicespack'),
+    jwtAudience: z.string().default('servicespack'),
   }),
 })
 
@@ -30,5 +32,7 @@ export const configuration: Configuration = configurationSchema.parse({
   },
   auth: {
     jwtSecret: process.env.JWT_SECRET,
+    jwtIssuer: process.env.JWT_ISSUER || 'servicespack',
+    jwtAudience: process.env.JWT_AUDIENCE || 'servicespack',
   },
 })

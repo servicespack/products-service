@@ -10,6 +10,8 @@ Whenever a new environment variable is introduced in the code (e.g., in `src/con
 - `DATABASE_URI`: MongoDB connection string.
 - `SERVER_PORT`: Port for the HTTP Express server.
 - `JWT_SECRET`: Secret key used for JSON Web Token signature and verification across the HTTP and MCP APIs.
+- `JWT_ISSUER`: The expected issuer claim for JSON Web Tokens validation (e.g., 'servicespack').
+- `JWT_AUDIENCE`: The expected audience claim for JSON Web Tokens validation (e.g., 'servicespack').
 
 ## Maintenance Rule
 
@@ -43,7 +45,7 @@ The codebase follows the Clean Architecture standards established across Service
   - `controllers/`: Express controllers (`ProductsController` consuming `ProductsControllerDependencies`).
   - `mcp/`: MCP controllers (`ProductsMcpController` consuming `ProductsMcpControllerDependencies`).
   - `middlewares/`: Express middlewares (`authMiddleware` validating JWT from headers and query parameters).
-  - `dtos/`: Presentation layer validation schemas (`CreateProductDto`, `UpdateProductDto`, `ChangeStockDto`).
+  - `dtos/`: Presentation layer validation schemas (`CreateProductDto`, `UpdateProductDto`, `ChangeStockDto`, `ListProductsQueryDto`).
   - `helpers/`: `handleHttpError` translating domain errors to appropriate HTTP responses (`404` for not found, `409` for insufficient stock, `400` for validation/domain errors).
 - `src/infrastructure/`: Frameworks, drivers, and persistence adapters:
   - `database/mongoose/`:
@@ -72,6 +74,7 @@ The codebase follows the Clean Architecture standards established across Service
 │   │   ├── dtos/
 │   │   │   ├── change-stock.dto.ts
 │   │   │   ├── create-product.dto.ts
+│   │   │   ├── list-products-query.dto.ts
 │   │   │   └── update-product.dto.ts
 │   │   ├── helpers/
 │   │   │   └── http-error.helper.ts
@@ -134,6 +137,7 @@ The codebase follows the Clean Architecture standards established across Service
 │   │   │   ├── domain.error.ts
 │   │   │   ├── index.ts
 │   │   │   ├── insufficient-stock.error.ts
+│   │   │   ├── invalid-pagination.error.ts
 │   │   │   ├── invalid-stock-quantity.error.ts
 │   │   │   └── product-not-found.error.ts
 │   │   └── repositories/

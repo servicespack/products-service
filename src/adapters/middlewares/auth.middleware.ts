@@ -29,7 +29,23 @@ export function authMiddleware(
   }
 
   try {
-    const decoded = jwt.verify(token, configuration.auth.jwtSecret) as { sub?: string, id?: string }
+    const options: jwt.VerifyOptions = {
+      algorithms: ['HS256'],
+      issuer: configuration.auth.jwtIssuer,
+      audience: configuration.auth.jwtAudience,
+    }
+
+    if (configuration.environment === 'production') {
+      options.ignoreExpiration = false
+    }
+
+    const decoded = jwt.verify(token, configuration.auth.jwtSecret, options) as { sub?: string, id?: string, exp?: number }
+
+    if (configuration.environment === 'production' && !decoded.exp) {
+      res.status(401).json({ error: 'Token missing expiration' })
+      return
+    }
+
     const userId = decoded.sub || decoded.id
 
     if (!userId) {

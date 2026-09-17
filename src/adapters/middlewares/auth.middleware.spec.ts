@@ -31,7 +31,11 @@ describe('authMiddleware', () => {
 
   it('should authenticate successfully with valid Bearer token in header', () => {
     const userId = '123'
-    const token = jwt.sign({ sub: userId }, configuration.auth.jwtSecret)
+    const token = jwt.sign(
+      { sub: userId },
+      configuration.auth.jwtSecret,
+      { issuer: configuration.auth.jwtIssuer, audience: configuration.auth.jwtAudience },
+    )
     mockRequest.headers!.authorization = `Bearer ${token}`
 
     authMiddleware(mockRequest as AuthenticatedRequest, mockResponse as Response, nextFunction)
@@ -43,7 +47,11 @@ describe('authMiddleware', () => {
 
   it('should authenticate successfully with valid token in query param', () => {
     const userId = '456'
-    const token = jwt.sign({ id: userId }, configuration.auth.jwtSecret)
+    const token = jwt.sign(
+      { id: userId },
+      configuration.auth.jwtSecret,
+      { issuer: configuration.auth.jwtIssuer, audience: configuration.auth.jwtAudience },
+    )
     mockRequest.query!.token = token
 
     authMiddleware(mockRequest as AuthenticatedRequest, mockResponse as Response, nextFunction)
@@ -63,7 +71,11 @@ describe('authMiddleware', () => {
   })
 
   it('should return 401 if token is valid but has no sub or id', () => {
-    const token = jwt.sign({ name: 'test' }, configuration.auth.jwtSecret)
+    const token = jwt.sign(
+      { name: 'test' },
+      configuration.auth.jwtSecret,
+      { issuer: configuration.auth.jwtIssuer, audience: configuration.auth.jwtAudience },
+    )
     mockRequest.headers!.authorization = `Bearer ${token}`
 
     authMiddleware(mockRequest as AuthenticatedRequest, mockResponse as Response, nextFunction)
