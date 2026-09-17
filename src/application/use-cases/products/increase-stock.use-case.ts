@@ -23,12 +23,13 @@ export class IncreaseStockUseCase {
       throw new ProductNotFoundError()
     }
 
-    const previousStock = product.stock
     const updatedProduct = await this.productRepository.incrementStock(id, request.quantity)
 
     if (updatedProduct === null) {
       throw new ProductNotFoundError()
     }
+
+    const previousStock = updatedProduct.stock - request.quantity
 
     await this.stockMovementRepository.create(new StockMovement({
       id: crypto.randomUUID(),

@@ -62,6 +62,36 @@ describe(IncreaseStockUseCase.name, () => {
     expect(result.stock).toBe(15)
   })
 
+  it('should derive previousStock from updatedProduct.stock to handle concurrent updates', async () => {
+    const existingProduct = new Product({
+      id: faker.string.uuid(),
+      name: 'Test Product',
+      price: 100,
+      stock: 5,
+    })
+
+    const updatedProduct = new Product({
+      id: existingProduct.id,
+      name: 'Test Product',
+      price: 100,
+      stock: 20,
+    })
+
+    vi.mocked(productRepository.findById).mockResolvedValueOnce(existingProduct)
+    vi.mocked(productRepository.incrementStock).mockResolvedValueOnce(updatedProduct)
+
+    const result = await increaseStockUseCase.execute(existingProduct.id!, { quantity: 10, reason: 'Restock' })
+
+    expect(stockMovementRepository.create).toHaveBeenCalledWith(expect.objectContaining({
+      productId: existingProduct.id,
+      type: 'INCREMENT',
+      quantity: 10,
+      previousStock: 10,
+      currentStock: 20,
+    }))
+    expect(result.stock).toBe(20)
+  })
+
   it('should throw InvalidStockQuantityError on non-positive or non-integer quantities', async () => {
     const id = faker.string.uuid()
 

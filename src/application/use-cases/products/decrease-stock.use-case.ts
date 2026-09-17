@@ -23,12 +23,13 @@ export class DecreaseStockUseCase {
       throw new ProductNotFoundError()
     }
 
-    const previousStock = product.stock
     const updatedProduct = await this.productRepository.decrementStock(id, request.quantity)
 
     if (updatedProduct === null) {
       throw new InsufficientStockError()
     }
+
+    const previousStock = updatedProduct.stock + request.quantity
 
     await this.stockMovementRepository.create(new StockMovement({
       id: crypto.randomUUID(),
