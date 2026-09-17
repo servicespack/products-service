@@ -6,19 +6,27 @@ on:
     types:
       - completed
     branches:
-      - develop
       - main
 
 jobs:
-  dockerfile-cd:
-    name: Dockerfile CD
+  publish:
+    name: Publish Image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actalog/check-ci@v1
       - uses: actions/checkout@v4
-      - uses: actalog/dockerfile-cd@v1
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
         with:
-          image-name: servicespack/products-service
-          image-version: develop
-          registry-username: servicespack
-          registry-token: ${{ secrets.DOCKER_HUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push image
+        run: |
+          IMAGE_NAME="ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
+          VERSION=$(npm pkg get version | sed 's/"//g')
+          docker image build -t "$IMAGE_NAME:latest" -t "$IMAGE_NAME:$VERSION" .
+          docker image push -a "$IMAGE_NAME"
