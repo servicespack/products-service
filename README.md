@@ -7,6 +7,46 @@ Microsserviço de gerenciamento de produtos e controle de estoque do ecossistema
 
 ---
 
+## ✨ Funcionalidades
+
+### 📦 Gestão de Catálogo de Produtos
+* **Cadastro com Validação Estrita**: Criação de produtos via Zod validando nome, descrição, preço, SKU único, estoque inicial, categorias, tags e status ativo.
+* **Busca e Filtragem Avançada**: Listagem com paginação (`page`, `pageSize`) e suporte a múltiplos filtros simultâneos:
+  * Busca textual em nome e descrição.
+  * Filtros exatos por SKU, categoria e tag.
+  * Filtro por faixa de preço (`minPrice` e `maxPrice`).
+  * Filtro por status (`active=true/false`).
+  * Consulta a itens excluídos (`includeDeleted=true` ou `onlyDeleted=true`).
+* **Consulta Detalhada**: Busca por ID com suporte a produtos arquivados.
+* **Atualização Parcial e Completa**: Atualização via `PUT` ou `PATCH` preservando integridade e trilha de estoque.
+* **Soft Delete e Restauração**: Exclusão lógica (`deletedAt`) e endpoint dedicado para restauração de produtos removidos.
+
+### 📊 Controle e Movimentação de Estoque
+* **Incremento de Estoque**: Adição atômica de saldo com registro obrigatório de motivo para auditoria.
+* **Decremento de Estoque**: Redução atômica com trava contra saldo insuficiente (retorna `409 Conflict`).
+* **Reserva e Liberação**: Casos de uso dedicados para reserva de estoque em pedidos e cancelamento de reservas.
+* **Histórico e Trilha de Auditoria**: Registro imutável de movimentações (`INCREMENT` e `DECREASE`) contendo saldo anterior, saldo atual, quantidade movimentada, motivo e timestamp.
+
+### 🤖 Integração com Model Context Protocol (MCP)
+Servidor MCP integrado para comunicação com agentes de IA via Server-Sent Events (SSE):
+* **Ferramentas (Tools)**:
+  * `search_products`: Busca e filtragem flexível no catálogo.
+  * `get_product_details`: Consulta detalhada de produto por ID ou SKU.
+  * `reserve_product`: Reserva de produtos com baixa atômica em estoque.
+  * `cancel_reservation`: Cancelamento de reserva com devolução dos itens ao estoque.
+  * `get_stock_history`: Consulta ao histórico de movimentações de um item.
+* **Recursos (Resources)**:
+  * `products://catalog/summary`: Resumo consolidado do catálogo (total de produtos, distribuição por categoria e preços mín/máx/médio).
+  * `products://stock/low-stock`: Monitoramento em tempo real de produtos com estoque baixo (<= 5).
+  * `products://{id}`: Leitura direta dos dados de um produto por URI.
+* **Prompts**:
+  * `recommend_products`: Template guiado para recomendações personalizadas com base em preferências, categoria e orçamento.
+
+### 🔒 Segurança e Autenticação
+* **Autenticação via JWT**: Proteção das rotas HTTP e streams SSE validando tokens via header `Authorization: Bearer <token>` ou query param `token`.
+
+---
+
 ## 🏛️ Arquitetura
 
 O projeto é organizado em camadas desacopladas seguindo o padrão de dependência unidirecional:
@@ -53,6 +93,7 @@ cp .env.example .env
 |---|---|---|
 | `DATABASE_URI` | URI de conexão com o MongoDB | `mongodb://localhost:27017/products-service` |
 | `SERVER_PORT` / `HTTP_SERVER_PORT` | Porta do servidor HTTP | `3000` |
+| `JWT_SECRET` | Chave secreta para assinatura e validação de tokens JWT | `secret` |
 | `NODE_ENV` | Ambiente de execução (`development`, `production`, `test`) | `development` |
 
 ### Executando com Docker Compose (Banco de Dados)
@@ -85,6 +126,8 @@ npm start
 ---
 
 ## 📡 Referência da API (Endpoints)
+
+> **Autenticação**: Todas as requisições exigem token JWT válido, fornecido via header `Authorization: Bearer <token>` ou parâmetro de consulta `?token=<token>`.
 
 ### 1. Criar Produto
 * **POST** `/products`
@@ -205,3 +248,11 @@ npm start
     ]
   }
   ```
+
+### 10. Endpoints MCP (Model Context Protocol)
+* **GET** `/sse` (ou `/mcp/sse`)
+  * Inicia a conexão SSE com o servidor MCP. Retorna o endpoint para envio de mensagens com `sessionId`.
+  * **Headers:** `Accept: text/event-stream`, `Authorization: Bearer <token>` (ou `?token=<token>`).
+* **POST** `/messages?sessionId=<sessionId>` (ou `/mcp/messages?sessionId=<sessionId>`)
+  * Envia mensagens JSON-RPC 2.0 para execução de ferramentas, leitura de recursos ou obtenção de prompts.
+  * **Headers:** `Content-Type: application/json`, `Authorization: Bearer <token>`.
