@@ -2,6 +2,7 @@ import type { Model } from 'mongoose'
 import type { IStockMovementDoc } from '../models/stock-movement.model'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { StockMovement } from '../../../../domain/entities/stock-movement.entity'
+import { transactionStorage } from '../transaction.context'
 import { MongooseStockMovementRepository } from './mongoose-stock-movement.repository'
 
 describe(MongooseStockMovementRepository.name, () => {
@@ -54,6 +55,56 @@ describe(MongooseStockMovementRepository.name, () => {
     )
     expect(result.id).toBe('mov-1')
     expect(result.quantity).toBe(5)
+  })
+
+  it('should pass session when transaction is active during create', async () => {
+    const movement = new StockMovement({
+      productId: 'prod-tx',
+      type: 'INCREMENT',
+      quantity: 1,
+      previousStock: 0,
+      currentStock: 1,
+    })
+    const fakeDoc = {
+      _id: 'mov-tx',
+      productId: 'prod-tx',
+      type: 'INCREMENT',
+      quantity: 1,
+      previousStock: 0,
+      currentStock: 1,
+      createdAt: new Date(),
+    }
+    const mockSession = { id: 'session-tx' } as any
+    mockModel.create.mockResolvedValueOnce(fakeDoc)
+
+    await transactionStorage.run(mockSession, async () => {
+      await repository.create(movement)
+    })
+
+    expect(mockModel.create).toHaveBeenCalledWith(
+      [expect.any(Object)],
+      { session: mockSession },
+    )
+  })
+
+  it('should list stock movements by productId without pagination', async () => {
+    const mockChain = {
+      sort: vi.fn().mockReturnThis(),
+      skip: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      then: vi.fn((resolve: any) => resolve([])),
+    }
+    mockModel.find.mockReturnValueOnce(mockChain)
+
+    const result = await repository.listByProductId({
+      productId: 'prod-1',
+    })
+
+    expect(mockModel.find).toHaveBeenCalledWith({ productId: 'prod-1' })
+    expect(mockChain.sort).toHaveBeenCalledWith({ createdAt: -1 })
+    expect(mockChain.limit).not.toHaveBeenCalled()
+    expect(mockChain.skip).not.toHaveBeenCalled()
+    expect(result).toEqual([])
   })
 
   it('should list stock movements by productId with pagination', async () => {

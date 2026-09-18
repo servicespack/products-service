@@ -99,7 +99,11 @@ describe(CancelReservationUseCase.name, () => {
   it('should throw ReservationNotFoundError if reservationId is empty', async () => {
     await expect(cancelReservationUseCase.execute({ reservationId: '' }))
       .rejects
-      .toThrow(ReservationNotFoundError)
+      .toThrowError('Reservation ID is required')
+
+    await expect(cancelReservationUseCase.execute({ reservationId: '   ' }))
+      .rejects
+      .toThrowError('Reservation ID is required')
 
     expect(reservationRepository.findById).not.toHaveBeenCalled()
   })

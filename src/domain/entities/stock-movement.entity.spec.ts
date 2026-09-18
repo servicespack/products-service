@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { InvalidStockQuantityError } from '../errors'
 import { StockMovement } from './stock-movement.entity'
 
 describe('stockMovement Entity', () => {
@@ -33,7 +32,7 @@ describe('stockMovement Entity', () => {
       quantity: 0,
       previousStock: 5,
       currentStock: 5,
-    })).toThrow(InvalidStockQuantityError)
+    })).toThrowError('Movement quantity must be a positive integer')
 
     expect(() => new StockMovement({
       productId: 'prod-1',
@@ -41,7 +40,7 @@ describe('stockMovement Entity', () => {
       quantity: -2,
       previousStock: 5,
       currentStock: 3,
-    })).toThrow(InvalidStockQuantityError)
+    })).toThrowError('Movement quantity must be a positive integer')
 
     expect(() => new StockMovement({
       productId: 'prod-1',
@@ -49,7 +48,7 @@ describe('stockMovement Entity', () => {
       quantity: 1.5,
       previousStock: 5,
       currentStock: 6,
-    })).toThrow(InvalidStockQuantityError)
+    })).toThrowError('Movement quantity must be a positive integer')
   })
 
   it('should throw error when previousStock or currentStock is negative or non-integer', () => {
@@ -59,7 +58,15 @@ describe('stockMovement Entity', () => {
       quantity: 2,
       previousStock: -1,
       currentStock: 1,
-    })).toThrow(InvalidStockQuantityError)
+    })).toThrowError('Previous stock must be a non-negative integer')
+
+    expect(() => new StockMovement({
+      productId: 'prod-1',
+      type: 'INCREMENT',
+      quantity: 2,
+      previousStock: 1.5,
+      currentStock: 3.5,
+    })).toThrowError('Previous stock must be a non-negative integer')
 
     expect(() => new StockMovement({
       productId: 'prod-1',
@@ -67,7 +74,15 @@ describe('stockMovement Entity', () => {
       quantity: 2,
       previousStock: 5,
       currentStock: -1,
-    })).toThrow(InvalidStockQuantityError)
+    })).toThrowError('Current stock must be a non-negative integer')
+
+    expect(() => new StockMovement({
+      productId: 'prod-1',
+      type: 'INCREMENT',
+      quantity: 2,
+      previousStock: 5,
+      currentStock: 7.2,
+    })).toThrowError('Current stock must be a non-negative integer')
   })
 
   it('should throw error when currentStock does not match calculation', () => {
@@ -77,7 +92,7 @@ describe('stockMovement Entity', () => {
       quantity: 5,
       previousStock: 10,
       currentStock: 10,
-    })).toThrow(InvalidStockQuantityError)
+    })).toThrowError('Current stock does not match the expected calculation')
 
     expect(() => new StockMovement({
       productId: 'prod-1',
@@ -85,7 +100,7 @@ describe('stockMovement Entity', () => {
       quantity: 5,
       previousStock: 10,
       currentStock: 10,
-    })).toThrow(InvalidStockQuantityError)
+    })).toThrowError('Current stock does not match the expected calculation')
   })
 
   it('should serialize to JSON correctly', () => {

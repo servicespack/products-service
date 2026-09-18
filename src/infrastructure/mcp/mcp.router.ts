@@ -8,7 +8,6 @@ export type McpServerFactory = () => McpServer
 export function createMcpRouter(mcpServerOrFactory: McpServer | McpServerFactory): express.Router {
   const router = express.Router()
   const transports = new Map<string, SSEServerTransport>()
-  const servers = new Map<string, McpServer>()
 
   const handleSse = async (req: Request, res: Response) => {
     try {
@@ -20,7 +19,6 @@ export function createMcpRouter(mcpServerOrFactory: McpServer | McpServerFactory
       const server = typeof mcpServerOrFactory === 'function' ? mcpServerOrFactory() : mcpServerOrFactory
 
       transports.set(transport.sessionId, transport)
-      servers.set(transport.sessionId, server)
 
       let isClosing = false
       const cleanup = async () => {
@@ -29,11 +27,8 @@ export function createMcpRouter(mcpServerOrFactory: McpServer | McpServerFactory
         }
         isClosing = true
         transports.delete(transport.sessionId)
-        servers.delete(transport.sessionId)
         try {
-          if (typeof server?.close === 'function') {
-            await server.close()
-          }
+          await server?.close?.()
         }
         catch {
           // Ignore close errors during disconnect

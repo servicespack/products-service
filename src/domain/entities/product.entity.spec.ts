@@ -37,8 +37,18 @@ describe('product Entity', () => {
   })
 
   it('should throw error when initial stock is negative or non-integer', () => {
-    expect(() => new Product({ name: 'Item', price: 10, stock: -1 })).toThrow(InvalidStockQuantityError)
-    expect(() => new Product({ name: 'Item', price: 10, stock: 1.5 })).toThrow(InvalidStockQuantityError)
+    expect(() => new Product({ name: 'Item', price: 10, stock: -1 })).toThrowError('Stock must be a non-negative integer')
+    expect(() => new Product({ name: 'Item', price: 10, stock: 1.5 })).toThrowError('Stock must be a non-negative integer')
+  })
+
+  it('should handle undefined deletedAt in isDeleted', () => {
+    const product = new Product({
+      name: 'Item',
+      price: 10,
+      deletedAt: undefined,
+    })
+    expect(product.deletedAt).toBeNull()
+    expect(product.isDeleted).toBe(false)
   })
 
   it('should assign default values for active, stock, categories, and tags', () => {
@@ -65,6 +75,9 @@ describe('product Entity', () => {
 
     product.decreaseStock(4)
     expect(product.stock).toBe(6)
+
+    product.decreaseStock(6)
+    expect(product.stock).toBe(0)
   })
 
   it('should throw InsufficientStockError when decreasing more than available stock', () => {

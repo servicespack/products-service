@@ -89,7 +89,7 @@ export class Product {
   }
 
   get isDeleted(): boolean {
-    return this._deletedAt !== null && this._deletedAt !== undefined
+    return this._deletedAt !== null
   }
 
   get createdAt(): Date | undefined {

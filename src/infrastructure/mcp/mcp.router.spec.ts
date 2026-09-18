@@ -60,6 +60,7 @@ describe('createMcpRouter', () => {
 
       expect(text).toContain('event: endpoint')
       expect(text).toContain('/messages?sessionId=')
+      expect(text).not.toContain('/mcp/messages')
       expect(mcpServer.connect).toHaveBeenCalledOnce()
     }
     finally {
@@ -202,5 +203,104 @@ describe('createMcpRouter', () => {
       abortController.abort()
       server.close()
     }
+  })
+
+  it('should clean up session on transport.onclose and handle close errors gracefully', async () => {
+    let capturedTransport: any
+    const mockClose = vi.fn().mockRejectedValueOnce(new Error('Close failure'))
+    const closeableServer = {
+      connect: vi.fn().mockImplementation(async (transport) => {
+        capturedTransport = transport
+        await transport.start()
+      }),
+      close: mockClose,
+    } as unknown as McpServer
+
+    const customApp = express()
+    customApp.use(express.json())
+    customApp.use(createMcpRouter(closeableServer))
+
+    const server = customApp.listen(0)
+    const { port } = server.address() as { port: number }
+    const abortController = new AbortController()
+
+    try {
+      const res = await fetch(`http://localhost:${port}/sse`, { signal: abortController.signal })
+      const reader = res.body!.getReader()
+      const { value } = await reader.read()
+      const text = new TextDecoder().decode(value)
+      const sessionId = text.split('sessionId=')[1]?.trim()
+
+      expect(capturedTransport).toBeDefined()
+
+      // Trigger transport.onclose first time
+      capturedTransport.onclose()
+      await new Promise(process.nextTick)
+
+      expect(mockClose).toHaveBeenCalledTimes(1)
+
+      // Trigger transport.onclose second time - should be ignored (isClosing)
+      capturedTransport.onclose()
+      await new Promise(process.nextTick)
+
+      expect(mockClose).toHaveBeenCalledTimes(1)
+
+      // Session should have been deleted
+      await request(customApp)
+        .post(`/messages?sessionId=${sessionId}`)
+        .send({ jsonrpc: '2.0', id: 1, method: 'ping' })
+        .expect(404)
+    }
+    finally {
+      abortController.abort()
+      server.close()
+    }
+  })
+
+  it('should support x-session-id header in handlePostMessages', async () => {
+    vi.mocked(mcpServer.connect).mockImplementation(async (transport) => {
+      await transport.start()
+    })
+
+    const server = app.listen(0)
+    const { port } = server.address() as { port: number }
+    const abortController = new AbortController()
+
+    try {
+      const res = await fetch(`http://localhost:${port}/sse`, { signal: abortController.signal })
+      const reader = res.body!.getReader()
+      const { value } = await reader.read()
+      const text = new TextDecoder().decode(value)
+      const sessionId = text.split('sessionId=')[1]?.trim()
+
+      const postRes = await request(app)
+        .post('/messages')
+        .set('x-session-id', sessionId)
+        .send({ jsonrpc: '2.0', id: 1, method: 'ping' })
+        .expect(202)
+
+      expect(postRes.status).toBe(202)
+    }
+    finally {
+      abortController.abort()
+      server.close()
+    }
+  })
+
+  it('should not send 500 when headers were already sent on error', async () => {
+    vi.mocked(mcpServer.connect).mockImplementation(async () => {
+      throw new Error('Connection failed')
+    })
+
+    const customApp = express()
+    customApp.get('/sse', (_req, res, next) => {
+      res.writeHead(200)
+      res.end('already sent')
+      next()
+    })
+    customApp.use(createMcpRouter(mcpServer))
+
+    const res = await request(customApp).get('/sse')
+    expect(res.status).toBe(200)
   })
 })

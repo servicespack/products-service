@@ -43,6 +43,14 @@ describe('listProductsQueryDto', () => {
     expect(result.success).toBe(true)
   })
 
+  it('should transform active false string to boolean false', () => {
+    const result = ListProductsQueryDto.safeParse({ active: 'false' })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.active).toBe(false)
+    }
+  })
+
   it('should reject invalid numeric fields', () => {
     expect(ListProductsQueryDto.safeParse({ minPrice: 'abc' }).success).toBe(false)
     expect(ListProductsQueryDto.safeParse({ maxPrice: 'invalid' }).success).toBe(false)

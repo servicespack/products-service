@@ -21,20 +21,84 @@ describe('createProductsMcpServer', () => {
 
   it('should create an McpServer instance with registered tools, resources and prompts', () => {
     const server = createProductsMcpServer(controller)
-    const registeredTools = (server as unknown as { _registeredTools: Record<string, unknown> })._registeredTools
-    const registeredResources = (server as unknown as { _registeredResources: Record<string, unknown> })._registeredResources
-    const registeredPrompts = (server as unknown as { _registeredPrompts: Record<string, unknown> })._registeredPrompts
+    const registeredTools = (server as unknown as { _registeredTools: Record<string, any> })._registeredTools
+    const registeredResources = (server as unknown as { _registeredResources: Record<string, any> })._registeredResources
+    const registeredTemplates = (server as unknown as { _registeredResourceTemplates: Record<string, any> })._registeredResourceTemplates
+    const registeredPrompts = (server as unknown as { _registeredPrompts: Record<string, any> })._registeredPrompts
 
-    expect(registeredTools).toHaveProperty('search_products')
-    expect(registeredTools).toHaveProperty('get_product_details')
-    expect(registeredTools).toHaveProperty('reserve_product')
-    expect(registeredTools).toHaveProperty('cancel_reservation')
-    expect(registeredTools).toHaveProperty('get_stock_history')
+    expect((server as any).server?._serverInfo).toEqual({
+      name: 'products-service',
+      version: '1.0.0',
+    })
 
-    expect(registeredResources).toHaveProperty('products://catalog/summary')
-    expect(registeredResources).toHaveProperty('products://stock/low-stock')
+    expect(registeredTools.search_products.description).toBe(
+      'Search and filter products by keyword in name, category, tag, price range, and pagination.',
+    )
+    const searchShape = registeredTools.search_products.inputSchema.shape
+    expect(searchShape.search.description).toBe('Keyword to search in product name')
+    expect(searchShape.category.description).toBe('Filter by product category')
+    expect(searchShape.tag.description).toBe('Filter by product tag')
+    expect(searchShape.minPrice.description).toBe('Minimum price filter')
+    expect(searchShape.maxPrice.description).toBe('Maximum price filter')
+    expect(searchShape.active.description).toBe('Filter by active status (default: true)')
+    expect(searchShape.page.description).toBe('Page number (default: 1)')
+    expect(searchShape.pageSize.description).toBe('Items per page (default: 20)')
 
-    expect(registeredPrompts).toHaveProperty('recommend_products')
+    expect(registeredTools.get_product_details.description).toBe('Get full details of a specific product by its ID or SKU.')
+    const detailsShape = registeredTools.get_product_details.inputSchema.shape
+    expect(detailsShape.id.description).toBe('Unique identifier (ID) of the product')
+    expect(detailsShape.sku.description).toBe('SKU of the product')
+
+    expect(registeredTools.reserve_product.description).toBe(
+      'Reserve a quantity of a product, reducing available stock and recording the reservation.',
+    )
+    const reserveShape = registeredTools.reserve_product.inputSchema.shape
+    expect(reserveShape.productId.description).toBe('Unique identifier (ID) of the product to reserve')
+    expect(reserveShape.productId.safeParse('').success).toBe(false)
+    expect(reserveShape.productId.safeParse('prod-123').success).toBe(true)
+    expect(reserveShape.quantity.description).toBe('Quantity of product to reserve (default: 1)')
+    expect(reserveShape.reason.description).toBe('Optional reason or reference for the reservation')
+
+    expect(registeredTools.cancel_reservation.description).toBe(
+      'Cancel a reservation using its reservation ID, returning the reserved quantity to available stock.',
+    )
+    const cancelShape = registeredTools.cancel_reservation.inputSchema.shape
+    expect(cancelShape.reservationId.description).toBe('Unique identifier (ID) of the reservation to cancel')
+    expect(cancelShape.reservationId.safeParse('').success).toBe(false)
+    expect(cancelShape.reservationId.safeParse('res-123').success).toBe(true)
+    expect(cancelShape.reason.description).toBe('Reason for cancellation')
+
+    expect(registeredTools.get_stock_history.description).toBe('Get the stock movement history for a specific product.')
+    const stockHistoryShape = registeredTools.get_stock_history.inputSchema.shape
+    expect(stockHistoryShape.productId.description).toBe('Unique identifier (ID) of the product')
+    expect(stockHistoryShape.productId.safeParse('').success).toBe(false)
+    expect(stockHistoryShape.productId.safeParse('prod-123').success).toBe(true)
+
+    expect(registeredResources['products://catalog/summary'].name).toBe('catalog_summary')
+    expect(registeredResources['products://catalog/summary'].metadata).toEqual({
+      description: 'Summary of active products, categories, and price ranges.',
+      mimeType: 'application/json',
+    })
+    expect(registeredResources['products://stock/low-stock'].name).toBe('low_stock')
+    expect(registeredResources['products://stock/low-stock'].metadata).toEqual({
+      description: 'List of products with critically low stock (<= 5).',
+      mimeType: 'application/json',
+    })
+    expect(registeredTemplates.product_by_id.metadata).toEqual({
+      description: 'Dynamic resource for product details by ID',
+      mimeType: 'application/json',
+    })
+    expect(registeredTemplates.product_by_id.resourceTemplate._uriTemplate.template).toBe('products://{id}')
+    expect('list' in registeredTemplates.product_by_id.resourceTemplate._callbacks).toBe(true)
+    expect(registeredTemplates.product_by_id.resourceTemplate._callbacks.list).toBeUndefined()
+
+    expect(registeredPrompts.recommend_products.description).toBe(
+      'Prompt guiding the LLM to recommend products based on user preferences and budget',
+    )
+    const promptShape = registeredPrompts.recommend_products.argsSchema.shape
+    expect(promptShape.category.description).toBe('Preferred product category (optional)')
+    expect(promptShape.budget.description).toBe('Customer budget limit (optional)')
+    expect(promptShape.preferences.description).toBe('Specific preferences or requirements (optional)')
   })
 
   it('should delegate search_products call to controller.searchProducts', async () => {

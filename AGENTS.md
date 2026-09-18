@@ -146,6 +146,7 @@ The codebase follows the Clean Architecture standards established across Service
 │   │   │   ├── stock-movement.entity.spec.ts
 │   │   │   └── stock-movement.entity.ts
 │   │   ├── errors/
+│   │   │   ├── domain-errors.spec.ts
 │   │   │   ├── domain.error.ts
 │   │   │   ├── index.ts
 │   │   │   ├── insufficient-stock.error.ts
@@ -162,9 +163,11 @@ The codebase follows the Clean Architecture standards established across Service
 │   │   ├── database/
 │   │   │   └── mongoose/
 │   │   │       ├── mappers/
+│   │   │       │   ├── product.mapper.spec.ts
 │   │   │       │   ├── product.mapper.ts
 │   │   │       │   ├── reservation.mapper.spec.ts
 │   │   │       │   ├── reservation.mapper.ts
+│   │   │       │   ├── stock-movement.mapper.spec.ts
 │   │   │       │   └── stock-movement.mapper.ts
 │   │   │       ├── models/
 │   │   │       │   ├── product.model.spec.ts

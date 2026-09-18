@@ -417,6 +417,95 @@ describe(MongooseProductRepository.name, () => {
       })
     })
 
+    it('should ignore empty string filters', async () => {
+      const mockQuery = {
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        then: vi.fn((resolve: any) => resolve([])),
+      }
+      vi.mocked(mockModel.find as any).mockReturnValueOnce(mockQuery)
+
+      await repository.list({
+        search: '',
+        sku: '',
+        category: '',
+        tag: '',
+      })
+
+      expect(mockModel.find).toHaveBeenCalledWith({
+        deletedAt: null,
+      })
+      expect(mockQuery.sort).toHaveBeenCalledWith({ _id: 1 })
+    })
+
+    it('should escape RegExp special characters in search', async () => {
+      const mockQuery = {
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        then: vi.fn((resolve: any) => resolve([])),
+      }
+      vi.mocked(mockModel.find as any).mockReturnValueOnce(mockQuery)
+
+      await repository.list({
+        search: 'item (test) [v1] + * ? ^ $ { } | \\',
+      })
+
+      expect(mockModel.find).toHaveBeenCalledWith({
+        deletedAt: null,
+        name: {
+          $regex: 'item \\(test\\) \\[v1\\] \\+ \\* \\? \\^ \\$ \\{ \\} \\| \\\\',
+          $options: 'i',
+        },
+      })
+    })
+
+    it('should support minPrice and maxPrice equal to 0', async () => {
+      const mockQuery = {
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        then: vi.fn((resolve: any) => resolve([])),
+      }
+      vi.mocked(mockModel.find as any).mockReturnValueOnce(mockQuery)
+
+      await repository.list({ minPrice: 0, maxPrice: 0 })
+
+      expect(mockModel.find).toHaveBeenCalledWith({
+        deletedAt: null,
+        price: { $gte: 0, $lte: 0 },
+      })
+    })
+
+    it('should support pagination with only pageSize or only page', async () => {
+      const mockQuery1 = {
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        then: vi.fn((resolve: any) => resolve([])),
+      }
+      vi.mocked(mockModel.find as any).mockReturnValueOnce(mockQuery1)
+
+      await repository.list({ pageSize: 15 })
+
+      expect(mockQuery1.limit).toHaveBeenCalledWith(15)
+      expect(mockQuery1.skip).not.toHaveBeenCalled()
+
+      const mockQuery2 = {
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        then: vi.fn((resolve: any) => resolve([])),
+      }
+      vi.mocked(mockModel.find as any).mockReturnValueOnce(mockQuery2)
+
+      await repository.list({ page: 2 })
+
+      expect(mockQuery2.skip).not.toHaveBeenCalled()
+      expect(mockQuery2.limit).not.toHaveBeenCalled()
+    })
+
     it('should apply limit without skip when only pageSize is provided', async () => {
       const mockQuery = {
         sort: vi.fn().mockReturnThis(),
@@ -553,6 +642,25 @@ describe(MongooseProductRepository.name, () => {
           min: 10,
           max: 100,
           average: 50,
+        },
+      })
+    })
+
+    it('should handle null fields in aggregation result', async () => {
+      vi.mocked(mockModel.aggregate as any).mockResolvedValueOnce([{
+        priceStats: null,
+        categories: null,
+      }] as any)
+
+      const result = await repository.getCatalogSummary()
+
+      expect(result).toEqual({
+        totalProducts: 0,
+        categories: {},
+        priceRange: {
+          min: 0,
+          max: 0,
+          average: 0,
         },
       })
     })

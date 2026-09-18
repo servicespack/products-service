@@ -30,6 +30,7 @@ describe('authMiddleware', () => {
   })
 
   it('should authenticate successfully with valid Bearer token in header', () => {
+    const verifySpy = vi.spyOn(jwt, 'verify')
     const userId = '123'
     const token = jwt.sign(
       { sub: userId },
@@ -40,6 +41,11 @@ describe('authMiddleware', () => {
 
     authMiddleware(mockRequest as AuthenticatedRequest, mockResponse as Response, nextFunction)
 
+    expect(verifySpy).toHaveBeenCalledWith(token, configuration.auth.jwtSecret, {
+      algorithms: ['HS256'],
+      issuer: configuration.auth.jwtIssuer,
+      audience: configuration.auth.jwtAudience,
+    })
     expect(mockRequest.userId).toBe(userId)
     expect(nextFunction).toHaveBeenCalled()
     expect(mockResponse.status).not.toHaveBeenCalled()
@@ -121,6 +127,7 @@ describe('authMiddleware', () => {
 
     it('should accept token with expiration in production', () => {
       configuration.environment = 'production'
+      const verifySpy = vi.spyOn(jwt, 'verify')
 
       const token = jwt.sign(
         { sub: 'user-prod' },
@@ -135,9 +142,50 @@ describe('authMiddleware', () => {
 
       authMiddleware(mockRequest as AuthenticatedRequest, mockResponse as Response, nextFunction)
 
+      expect(verifySpy).toHaveBeenCalledWith(token, configuration.auth.jwtSecret, {
+        algorithms: ['HS256'],
+        issuer: configuration.auth.jwtIssuer,
+        audience: configuration.auth.jwtAudience,
+        ignoreExpiration: false,
+      })
       expect(mockRequest.userId).toBe('user-prod')
       expect(nextFunction).toHaveBeenCalled()
       expect(mockResponse.status).not.toHaveBeenCalled()
+    })
+
+    it('should reject expired token in production', () => {
+      configuration.environment = 'production'
+
+      const token = jwt.sign(
+        { sub: 'user-prod' },
+        configuration.auth.jwtSecret,
+        {
+          issuer: configuration.auth.jwtIssuer,
+          audience: configuration.auth.jwtAudience,
+          expiresIn: -10,
+        },
+      )
+      mockRequest.headers!.authorization = `Bearer ${token}`
+
+      authMiddleware(mockRequest as AuthenticatedRequest, mockResponse as Response, nextFunction)
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401)
+      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Invalid token' })
+      expect(nextFunction).not.toHaveBeenCalled()
+    })
+
+    it('should reject token with wrong issuer or audience', () => {
+      const wrongIssuerToken = jwt.sign(
+        { sub: 'user-prod' },
+        configuration.auth.jwtSecret,
+        { issuer: 'wrong-issuer', audience: configuration.auth.jwtAudience, expiresIn: '1h' },
+      )
+      mockRequest.headers!.authorization = `Bearer ${wrongIssuerToken}`
+
+      authMiddleware(mockRequest as AuthenticatedRequest, mockResponse as Response, nextFunction)
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401)
+      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Invalid token' })
     })
   })
 })

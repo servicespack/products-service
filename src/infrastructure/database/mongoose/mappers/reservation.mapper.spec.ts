@@ -91,6 +91,9 @@ describe('reservationMapper', () => {
       quantity: 1,
       status: 'ACTIVE',
     })
+    expect('reason' in persistence).toBe(false)
+    expect('createdAt' in persistence).toBe(false)
+    expect('updatedAt' in persistence).toBe(false)
     expect(persistence.reason).toBeUndefined()
     expect(persistence.createdAt).toBeUndefined()
     expect(persistence.updatedAt).toBeUndefined()

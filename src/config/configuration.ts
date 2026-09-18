@@ -21,18 +21,18 @@ const configurationSchema = z.object({
 export type Configuration = z.infer<typeof configurationSchema>
 
 export const configuration: Configuration = configurationSchema.parse({
-  environment: process.env.NODE_ENV || 'development',
+  environment: process.env.NODE_ENV,
   database: {
-    uri: process.env.DATABASE_URI || 'mongodb://localhost:27017/products-service',
+    uri: process.env.DATABASE_URI,
   },
   servers: {
     http: {
-      port: process.env.HTTP_SERVER_PORT || process.env.SERVER_PORT || '3000',
+      port: process.env.HTTP_SERVER_PORT || process.env.SERVER_PORT,
     },
   },
   auth: {
     jwtSecret: process.env.JWT_SECRET,
-    jwtIssuer: process.env.JWT_ISSUER || 'servicespack',
-    jwtAudience: process.env.JWT_AUDIENCE || 'servicespack',
+    jwtIssuer: process.env.JWT_ISSUER,
+    jwtAudience: process.env.JWT_AUDIENCE,
   },
 })

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { InvalidStockQuantityError } from '../errors/invalid-stock-quantity.error'
 import { ReservationAlreadyCancelledError } from '../errors/reservation-already-cancelled.error'
 import { Reservation } from './reservation.entity'
 
@@ -23,12 +22,13 @@ describe(Reservation.name, () => {
 
   it('should throw when productId is empty', () => {
     expect(() => new Reservation({ productId: '', quantity: 2 })).toThrow('Product ID is required')
+    expect(() => new Reservation({ productId: '   ', quantity: 2 })).toThrow('Product ID is required')
   })
 
   it('should throw InvalidStockQuantityError when quantity is not a positive integer', () => {
-    expect(() => new Reservation({ productId: 'prod-1', quantity: 0 })).toThrow(InvalidStockQuantityError)
-    expect(() => new Reservation({ productId: 'prod-1', quantity: -2 })).toThrow(InvalidStockQuantityError)
-    expect(() => new Reservation({ productId: 'prod-1', quantity: 1.5 })).toThrow(InvalidStockQuantityError)
+    expect(() => new Reservation({ productId: 'prod-1', quantity: 0 })).toThrowError('Reservation quantity must be a positive integer')
+    expect(() => new Reservation({ productId: 'prod-1', quantity: -2 })).toThrowError('Reservation quantity must be a positive integer')
+    expect(() => new Reservation({ productId: 'prod-1', quantity: 1.5 })).toThrowError('Reservation quantity must be a positive integer')
   })
 
   it('should cancel active reservation', () => {

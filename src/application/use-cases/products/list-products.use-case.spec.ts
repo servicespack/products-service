@@ -36,6 +36,11 @@ describe(ListProductsUseCase.name, () => {
       .toThrow(InvalidPaginationError)
   })
 
+  it('should allow pageSize equal to 1', async () => {
+    await expect(listProductsUseCase.execute({ pageSize: 1 })).resolves.toEqual([])
+    expect(productRepository.list).toHaveBeenCalledWith(expect.objectContaining({ pageSize: 1 }))
+  })
+
   it('should return a list of products with default params', async () => {
     const returned = await listProductsUseCase.execute()
 

@@ -2,6 +2,7 @@ import type { Model } from 'mongoose'
 import type { IReservationDoc } from '../models/reservation.model'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Reservation } from '../../../../domain/entities/reservation.entity'
+import { transactionStorage } from '../transaction.context'
 import { MongooseReservationRepository } from './mongoose-reservation.repository'
 
 describe(MongooseReservationRepository.name, () => {
@@ -43,6 +44,34 @@ describe(MongooseReservationRepository.name, () => {
     expect(result.id).toBe('res-123')
     expect(result.productId).toBe('prod-123')
     expect(result.quantity).toBe(2)
+  })
+
+  it('should pass session when transaction is active during create and findById', async () => {
+    const reservation = new Reservation({
+      id: 'res-tx',
+      productId: 'prod-tx',
+      quantity: 1,
+    })
+    const mockDoc = {
+      _id: 'res-tx',
+      productId: 'prod-tx',
+      quantity: 1,
+      status: 'ACTIVE',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+    const mockSession = { id: 'session-123' } as any
+
+    vi.mocked(model.create).mockResolvedValueOnce([mockDoc] as any)
+    vi.mocked(model.findById).mockResolvedValueOnce(mockDoc as any)
+
+    await transactionStorage.run(mockSession, async () => {
+      await repository.create(reservation)
+      await repository.findById('res-tx')
+    })
+
+    expect(model.create).toHaveBeenCalledWith([expect.any(Object)], { session: mockSession })
+    expect(model.findById).toHaveBeenCalledWith('res-tx', null, { session: mockSession })
   })
 
   it('should find reservation by id', async () => {

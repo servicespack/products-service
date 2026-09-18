@@ -48,6 +48,7 @@ describe('cooldown', () => {
   })
 
   it('should close server, disconnect mongoose and exit process when signal is triggered', async () => {
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout')
     cooldown({ server: mockServer as http.Server })
 
     const sigtermCall = processOnSpy.mock.calls.find((call: any[]) => call[0] === 'SIGTERM')
@@ -55,14 +56,32 @@ describe('cooldown', () => {
 
     sigtermHandler()
 
+    expect(logger.info).toHaveBeenCalledWith('Graceful shutdown initiated')
     expect(mockServer.close).toHaveBeenCalled()
     await new Promise(process.nextTick)
 
     expect(mongoose.disconnect).toHaveBeenCalled()
+    expect(clearTimeoutSpy).toHaveBeenCalled()
     expect(processExitSpy).toHaveBeenCalledWith(128 + 15)
   })
 
+  it('should handle SIGHUP signal and exit with code 129', async () => {
+    cooldown({ server: mockServer as http.Server })
+
+    const sighupCall = processOnSpy.mock.calls.find((call: any[]) => call[0] === 'SIGHUP')
+    const sighupHandler = sighupCall[1]
+
+    sighupHandler()
+
+    expect(mockServer.close).toHaveBeenCalled()
+    await new Promise(process.nextTick)
+
+    expect(mongoose.disconnect).toHaveBeenCalled()
+    expect(processExitSpy).toHaveBeenCalledWith(128 + 1)
+  })
+
   it('should log error if mongoose disconnect fails', async () => {
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout')
     const error = new Error('Disconnect failed')
     vi.mocked(mongoose.disconnect).mockRejectedValueOnce(error)
 
@@ -77,6 +96,7 @@ describe('cooldown', () => {
     await new Promise(process.nextTick)
 
     expect(mongoose.disconnect).toHaveBeenCalled()
+    expect(clearTimeoutSpy).toHaveBeenCalled()
     expect(logger.error).toHaveBeenCalledWith(error)
     expect(processExitSpy).toHaveBeenCalledWith(128 + 15)
   })

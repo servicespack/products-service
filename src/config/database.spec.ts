@@ -1,5 +1,8 @@
 import mongoose from 'mongoose'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { productValidationRules } from '../infrastructure/database/mongoose/models/product.model'
+import { reservationValidationRules } from '../infrastructure/database/mongoose/models/reservation.model'
+import { stockMovementValidationRules } from '../infrastructure/database/mongoose/models/stock-movement.model'
 import { configuration } from './configuration'
 import { connectDatabase } from './database'
 import { logger } from './logger'
@@ -43,9 +46,9 @@ describe('database Configuration', () => {
     expect(mockDb.listCollections).toHaveBeenCalledWith({ name: 'products' })
     expect(mockDb.listCollections).toHaveBeenCalledWith({ name: 'stockmovements' })
     expect(mockDb.listCollections).toHaveBeenCalledWith({ name: 'reservations' })
-    expect(mockDb.createCollection).toHaveBeenCalledWith('products', expect.any(Object))
-    expect(mockDb.createCollection).toHaveBeenCalledWith('stockmovements', expect.any(Object))
-    expect(mockDb.createCollection).toHaveBeenCalledWith('reservations', expect.any(Object))
+    expect(mockDb.createCollection).toHaveBeenCalledWith('products', { validator: productValidationRules })
+    expect(mockDb.createCollection).toHaveBeenCalledWith('stockmovements', { validator: stockMovementValidationRules })
+    expect(mockDb.createCollection).toHaveBeenCalledWith('reservations', { validator: reservationValidationRules })
     expect(mockDb.command).not.toHaveBeenCalled()
     expect(result).toBe(mockConnection)
     expect(logger.info).toHaveBeenCalledWith('Connected to the database')
@@ -76,9 +79,9 @@ describe('database Configuration', () => {
     expect(mockDb.listCollections).toHaveBeenCalledWith({ name: 'stockmovements' })
     expect(mockDb.listCollections).toHaveBeenCalledWith({ name: 'reservations' })
     expect(mockDb.createCollection).not.toHaveBeenCalled()
-    expect(mockDb.command).toHaveBeenCalledWith({ collMod: 'products', validator: expect.any(Object) })
-    expect(mockDb.command).toHaveBeenCalledWith({ collMod: 'stockmovements', validator: expect.any(Object) })
-    expect(mockDb.command).toHaveBeenCalledWith({ collMod: 'reservations', validator: expect.any(Object) })
+    expect(mockDb.command).toHaveBeenCalledWith({ collMod: 'products', validator: productValidationRules })
+    expect(mockDb.command).toHaveBeenCalledWith({ collMod: 'stockmovements', validator: stockMovementValidationRules })
+    expect(mockDb.command).toHaveBeenCalledWith({ collMod: 'reservations', validator: reservationValidationRules })
     expect(result).toBe(mockConnection)
   })
 

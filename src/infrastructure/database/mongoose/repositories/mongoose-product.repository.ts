@@ -86,20 +86,20 @@ export class MongooseProductRepository implements IProductRepository {
       query.deletedAt = null
     }
 
-    if (params?.search && params.search !== '') {
+    if (params?.search) {
       const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       query.name = { $regex: escapeRegExp(params.search), $options: 'i' }
     }
 
-    if (params?.sku && params.sku !== '') {
+    if (params?.sku) {
       query.sku = params.sku
     }
 
-    if (params?.category && params.category !== '') {
+    if (params?.category) {
       query.categories = params.category
     }
 
-    if (params?.tag && params.tag !== '') {
+    if (params?.tag) {
       query.tags = params.tag
     }
 
@@ -186,12 +186,13 @@ export class MongooseProductRepository implements IProductRepository {
     ])
 
     const stats = result?.priceStats?.[0]
-    const categoriesList: Array<{ _id: string, count: number }> = result?.categories || []
     const categories: Record<string, number> = {}
 
-    for (const item of categoriesList) {
-      if (item._id) {
-        categories[item._id] = item.count
+    if (result?.categories) {
+      for (const item of result.categories) {
+        if (item._id) {
+          categories[item._id] = item.count
+        }
       }
     }
 

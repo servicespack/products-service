@@ -483,6 +483,24 @@ describe(ProductsController.name, () => {
       })
     })
 
+    it('should parse pageSize query parameter directly', async () => {
+      const productId = faker.string.uuid()
+      vi.mocked(listStockMovementsUseCase.execute).mockResolvedValueOnce([])
+
+      const request = {
+        params: { id: productId },
+        query: { page: '2', pageSize: '15' },
+      } as unknown as Request
+
+      await controller.listStockMovements(request, mockResponse)
+
+      expect(mockResponse.status).toHaveBeenCalledWith(200)
+      expect(listStockMovementsUseCase.execute).toHaveBeenCalledWith(productId, {
+        page: 2,
+        pageSize: 15,
+      })
+    })
+
     it('should return 404 when product is not found', async () => {
       const productId = faker.string.uuid()
       vi.mocked(listStockMovementsUseCase.execute).mockRejectedValueOnce(new ProductNotFoundError())

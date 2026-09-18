@@ -113,7 +113,7 @@ export class ProductsMcpController {
       }
       else if (input.sku) {
         const products = await this.dependencies.listProductsUseCase.execute({ sku: input.sku })
-        product = products.length > 0 ? products[0] : null
+        product = products[0]
       }
       else {
         throw new Error('Must provide either id or sku')
