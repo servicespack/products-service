@@ -102,3 +102,9 @@ dist
 
 # TernJS port file
 .tern-port
+
+# Custom
+temp/
+sqlite.db
+.stryker-tmp/
+reports/
