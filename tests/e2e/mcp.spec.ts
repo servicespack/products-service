@@ -303,6 +303,8 @@ describe('mcp server (e2e)', () => {
     expect(cancelResult.result.isError).toBeUndefined()
     const cancelParsed = JSON.parse(cancelResult.result.content[0].text)
     expect(cancelParsed.product.stock).toBe(5)
+    expect(cancelParsed.reservation.status).toBe('CANCELLED')
+    expect(cancelParsed.reservation.reason).toBe('Order cancelled')
 
     // Verify stock restored in database
     const restoredProduct = await request(httpServer).get(`/products/${productId}`).set('Authorization', `Bearer ${authToken}`).expect(200)

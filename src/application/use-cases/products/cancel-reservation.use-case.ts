@@ -23,7 +23,7 @@ export class CancelReservationUseCase {
         throw new ReservationNotFoundError()
       }
 
-      reservation.cancel()
+      reservation.cancel(request.reason)
       const updatedReservation = await this.reservationRepository.update(reservation)
 
       const product = await this.increaseStockUseCase.execute(reservation.productId, {

@@ -351,6 +351,21 @@ describe(ProductsMcpController.name, () => {
       })
     })
 
+    it('should cancel reservation with reason and return updated product and reservation', async () => {
+      const reservationId = faker.string.uuid()
+      const productId = faker.string.uuid()
+      const product = new Product({ id: productId, name: 'Keyboard', price: 79.99, stock: 10 })
+      const reservation = new Reservation({ id: reservationId, productId, quantity: 2, status: 'CANCELLED', reason: 'Customer requested cancellation' })
+      vi.mocked(cancelReservationUseCase.execute).mockResolvedValueOnce({ product, reservation })
+
+      const result = await controller.cancelReservation({ reservationId, reason: 'Customer requested cancellation' })
+
+      expect(cancelReservationUseCase.execute).toHaveBeenCalledWith({ reservationId, reason: 'Customer requested cancellation' })
+      expect(result.isError).toBeUndefined()
+      const parsed = JSON.parse(getText(result))
+      expect(parsed.reservation.reason).toBe('Customer requested cancellation')
+    })
+
     it('should return error when ReservationNotFoundError is thrown', async () => {
       const reservationId = faker.string.uuid()
       vi.mocked(cancelReservationUseCase.execute).mockRejectedValueOnce(new ReservationNotFoundError())

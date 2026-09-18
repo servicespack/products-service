@@ -129,6 +129,38 @@ describe(MongooseReservationRepository.name, () => {
     expect(result.status).toBe('CANCELLED')
   })
 
+  it('should update reservation with reason', async () => {
+    const reservation = new Reservation({
+      id: 'res-123',
+      productId: 'prod-123',
+      quantity: 2,
+      status: 'CANCELLED',
+      reason: 'Cancelled by customer',
+    })
+
+    const mockDoc = {
+      _id: 'res-123',
+      productId: 'prod-123',
+      quantity: 2,
+      status: 'CANCELLED',
+      reason: 'Cancelled by customer',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    vi.mocked(model.findByIdAndUpdate).mockResolvedValueOnce(mockDoc as any)
+
+    const result = await repository.update(reservation)
+
+    expect(model.findByIdAndUpdate).toHaveBeenCalledWith(
+      'res-123',
+      expect.objectContaining({ status: 'CANCELLED', reason: 'Cancelled by customer' }),
+      { new: true, session: undefined },
+    )
+    expect(result.status).toBe('CANCELLED')
+    expect(result.reason).toBe('Cancelled by customer')
+  })
+
   it('should throw when updating non-existent reservation', async () => {
     const reservation = new Reservation({
       id: 'res-123',

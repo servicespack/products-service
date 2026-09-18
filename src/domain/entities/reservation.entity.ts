@@ -18,7 +18,7 @@ export class Reservation {
   private readonly _productId: string
   private readonly _quantity: number
   private _status: ReservationStatus
-  private readonly _reason?: string
+  private _reason?: string
   private readonly _createdAt: Date
   private _updatedAt: Date
 
@@ -68,11 +68,14 @@ export class Reservation {
     return this._updatedAt
   }
 
-  cancel(): void {
+  cancel(reason?: string): void {
     if (this._status === 'CANCELLED') {
       throw new ReservationAlreadyCancelledError()
     }
     this._status = 'CANCELLED'
+    if (reason !== undefined) {
+      this._reason = reason
+    }
     this._updatedAt = new Date()
   }
 

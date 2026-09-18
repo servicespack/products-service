@@ -57,6 +57,7 @@ describe(CancelReservationUseCase.name, () => {
     expect(reservationRepository.update).toHaveBeenCalledWith(expect.objectContaining({
       id: reservationId,
       status: 'CANCELLED',
+      reason: 'Customer cancelled',
     }))
     expect(increaseStockUseCase.execute).toHaveBeenCalledWith(productId, {
       quantity: 3,
@@ -64,6 +65,7 @@ describe(CancelReservationUseCase.name, () => {
     })
     expect(result.product).toBe(product)
     expect(result.reservation.status).toBe('CANCELLED')
+    expect(result.reservation.reason).toBe('Customer cancelled')
   })
 
   it('should use default reason when reason is not provided', async () => {

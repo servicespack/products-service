@@ -43,6 +43,20 @@ describe(Reservation.name, () => {
     expect(reservation.status).toBe('CANCELLED')
   })
 
+  it('should cancel active reservation and update reason when provided', () => {
+    const reservation = new Reservation({
+      id: 'res-1',
+      productId: 'prod-1',
+      quantity: 2,
+      reason: 'Hold',
+    })
+
+    reservation.cancel('Customer requested cancellation')
+
+    expect(reservation.status).toBe('CANCELLED')
+    expect(reservation.reason).toBe('Customer requested cancellation')
+  })
+
   it('should throw ReservationAlreadyCancelledError on repeated cancellation', () => {
     const reservation = new Reservation({
       id: 'res-1',

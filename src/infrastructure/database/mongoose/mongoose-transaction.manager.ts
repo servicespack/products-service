@@ -4,6 +4,11 @@ import { transactionStorage } from './transaction.context'
 
 export class MongooseTransactionManager implements ITransactionManager {
   async runInTransaction<T>(work: () => Promise<T>): Promise<T> {
+    const existingSession = transactionStorage.getStore()
+    if (existingSession) {
+      return work()
+    }
+
     const session = await mongoose.startSession()
     try {
       let result!: T
